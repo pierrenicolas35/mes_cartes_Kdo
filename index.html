@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mes Cartes Cadeaux</title>
+  
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  
+  <style>
+    :root {
+      --primary: #2b5876;
+      --secondary: #4e4376;
+      --background: #f7f9fc;
+      --text: #333;
+      --card-bg: #ffffff;
+      --success: #2e7d32;
+      --danger: #d32f2f;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+    body { background-color: var(--background); color: var(--text); padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+
+    .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 20px; }
+
+    header { display: flex; justify-content: center; align-items: center; padding: 10px 0; position: relative; width: 100%; }
+    header h1 { font-size: 1.4rem; color: var(--primary); }
+    
+    .fs-toggle-btn { background: none; border: none; color: var(--primary); cursor: pointer; position: absolute; right: 5px; display: flex; align-items: center; justify-content: center; padding: 5px; }
+    .fs-toggle-btn .material-icons { font-size: 1.6rem; }
+
+    .screen { display: none; background: var(--card-bg); border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); animation: fadeIn 0.3s ease; }
+    .screen.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .banner { display: none; padding: 16px; border-radius: 12px; text-align: center; font-weight: 600; margin-bottom: 20px; align-items: center; justify-content: center; gap: 10px; animation: slideDown 0.3s ease; width: 100%; }
+    .success-banner { background-color: #e8f5e9; color: var(--success); }
+    .error-banner { background-color: #ffebee; color: var(--danger); }
+    .banner .material-icons { font-size: 1.8rem; }
+
+    .menu-grid { display: flex; flex-direction: column; gap: 15px; }
+    .menu-btn { display: flex; align-items: center; gap: 20px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; padding: 22px; border-radius: 16px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(78, 67, 118, 0.2); }
+    .menu-btn .material-icons { font-size: 2.2rem; }
+
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; color: #555; }
+    input { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; background-color: #fafafa; }
+
+    .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn:disabled { background-color: #ccc !important; color: #888 !important; cursor: not-allowed; }
+    .btn-submit { background-color: var(--success); color: white; margin-top: 10px; }
+    .btn-back { background-color: #eee; color: #555; margin-top: 15px; }
+    .btn-camera { background-color: var(--secondary); color: white; width: auto; padding: 12px; }
+    .btn-gallery { background-color: var(--primary); color: white; width: auto; padding: 12px; }
+    .btn-toggle-code { background-color: #e0e0e0; color: #333; padding: 10px; font-size: 0.9rem; margin-top: 10px; }
+
+    .item-list { display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto; margin: 15px 0; }
+    .card-item { padding: 18px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .card-info h3 { font-size: 1.1rem; color: #222; }
+    .card-info p { font-size: 0.9rem; color: #777; }
+    .btn-select { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; }
+
+    .qr-container { text-align: center; margin: 10px 0 5px 0; background: #f9f9f9; padding: 15px; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; cursor: pointer; transition: background 0.2s; }
+    .qr-container:hover { background: #f0f0f0; }
+    #qr-code-element { display: inline-block; background: white; padding: 10px; border-radius: 10px; border: 1px solid #eee; }
+    #qr-code-element img { margin: 0 auto; max-width: 100%; }
+    #barcode-element { max-width: 100%; height: auto; display: none; }
+
+    .qr-container:fullscreen, .qr-container:-webkit-full-screen {
+      background-color: white !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 0 !important;
+    }
+    .qr-container:fullscreen #qr-code-element, .qr-container:-webkit-full-screen #qr-code-element {
+      transform: scale(1.5);
+    }
+    .qr-container:fullscreen #barcode-element, .qr-container:-webkit-full-screen #barcode-element {
+      transform: scale(1.3) rotate(90deg);
+      max-width: 90vh;
+    }
+
+    .hist-item { padding: 15px; border-bottom: 1px solid #f0f0f0; }
+    .hist-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
+    .hist-meta { display: flex; justify-content: space-between; color: #999; font-size: 0.8rem; }
+    .plus { color: var(--success); }
+    .moins { color: var(--danger); }
+
+    .loading { text-align: center; padding: 30px; color: #888; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <h1>🎁 Nos Cartes Cadeaux</h1>
+      <button class="fs-toggle-btn" onclick="basculerPleinEcranApplication()">
+        <span class="material-icons" id="fs-icon">fullscreen</span>
+      </button>
+    </header>
+
+    <div id="global-error" class="banner error-banner">
+      <span class="material-icons">error_outline</span> 
+      <span id="error-text">Message d'erreur</span>
+    </div>
+
+    <!-- ÉCRAN 1 : MENU PRINCIPAL -->
+    <div id="screen-menu" class="screen active">
+      <div class="menu-grid">
+        <button class="menu-btn" onclick="switchScreen('screen-add')">
+          <span class="material-icons">add_a_photo</span> Ajouter une carte
+        </button>
+        <button class="menu-btn" onclick="openUseScreen()">
+          <span class="material-icons">qr_code_scanner</span> Utiliser une carte
+        </button>
+        <button class="menu-btn" onclick="openHistoryScreen()">
+          <span class="material-icons">history</span> Historique
+        </button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN 2 : AJOUTER UNE CARTE -->
+    <div id="screen-add" class="screen">
+      <h2>Nouvelle Carte</h2>
+      
+      <div id="add-success" class="banner success-banner">
+        <span class="material-icons">check_circle</span> Carte enregistrée !
+      </div>
+
+      <div id="add-form-content">
+        <div class="form-group" style="margin-top:20px;">
+          <label>Enseigne / Magasin</label>
+          <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon...">
+        </div>
+        <div class="form-group">
+          <label>Montant Initial (€)</label>
+          <input type="text" inputmode="decimal" id="add-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
+        </div>
+        <div class="form-group">
+          <label>Date de validité (Optionnel)</label>
+          <input type="date" id="add-date">
+        </div>
+        <div class="form-group">
+          <label>Données du QR/Code-barres</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="add-code" placeholder="Texte du code" style="flex: 1;">
+            
+            <button class="btn btn-camera" onclick="document.getElementById('qr-input-camera').click()" title="Prendre une photo">
+              <span class="material-icons">photo_camera</span>
+            </button>
+            <button class="btn btn-gallery" onclick="document.getElementById('qr-input-gallery').click()" title="Importer un screenshot">
+              <span class="material-icons">image</span>
+            </button>
+            
+            <input type="file" id="qr-input-camera" accept="image/*" capture="environment" style="display:none" onchange="analyserPhoto(event)">
+            <input type="file" id="qr-input-gallery" accept="image/*" style="display:none" onchange="analyserPhoto(event)">
+          </div>
+          <div id="reader" style="display:none;"></div>
+        </div>
+        <button class="btn btn-submit" id="btn-save-card" onclick="saveNewCard()">
+          <span class="material-icons">save</span> Enregistrer la carte
+        </button>
+        <button class="btn btn-back" id="btn-back-card" onclick="switchScreen('screen-menu')">Retour</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN 3 : SÉLECTION DE CARTE -->
+    <div id="screen-use-list" class="screen">
+      <h2>Choisir une carte</h2>
+      <div id="list-cartes-container" class="item-list"></div>
+      <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
+    </div>
+
+    <!-- ÉCRAN 4 : APERÇU ET DÉBIT -->
+    <div id="screen-use-action" class="screen">
+      <h2 id="action-title" style="text-align: center;">...</h2>
+      
+      <div id="use-success" class="banner success-banner">
+        <span class="material-icons">check_circle</span> Solde mis à jour !
+      </div>
+
+      <div id="use-form-content">
+        <p style="text-align: center; margin: 10px 0; color:#666;">
+          Solde : <span id="action-solde" style="font-weight:bold; color: var(--primary); font-size: 1.2rem;">0</span>€
+        </p>
+        <p id="action-validite" style="text-align: center; margin-bottom: 5px; color: var(--danger); font-size: 0.9rem; display: none;"></p>
+        
+        <p style="text-align:center; font-size:0.8rem; color:#888; margin-top:10px;">Cliquez sur le code pour le plein écran</p>
+        
+        <div class="qr-container" onclick="gererPleinEcranCode()">
+          <div id="qr-code-element"></div>
+          <svg id="barcode-element"></svg>
+        </div>
+        
+        <button class="btn btn-toggle-code" id="btn-toggle-view" onclick="basculerFormatCode()">
+          <span class="material-icons">barcode_reader</span> Afficher en Code-barres
+        </button>
+
+        <div class="form-group" style="margin-top: 15px;">
+          <label>Montant utilisé (€)</label>
+          <input type="text" inputmode="decimal" id="use-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
+        </div>
+        <button class="btn btn-submit" id="btn-confirm-spend" onclick="confirmSpend()">
+          <span class="material-icons">done_all</span> Valider la dépense
+        </button>
+        <button class="btn btn-back" id="btn-back-spend" onclick="openUseScreen()">Retour</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN 5 : HISTORIQUE -->
+    <div id="screen-history" class="screen">
+      <h2>Historique</h2>
+      <div id="history-container" class="item-list"></div>
+      <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
+    </div>
+
+  </div>
+
+  <script>
+    // URL DE VOTRE API GOOGLE APPS SCRIPT
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwxJIhCptWawA9gafafm37mCg-OahpWLi38whRSTRugaGcnS4u5zBRsRCqen8OxofQv6Q/exec';
+
+    let currentCard = null;
+    let errorTimeout = null;
+    let modeAffichageCode = 'QR'; 
+
+    // --- FONCTIONS DE COMMUNICATION API (FETCH) ---
+    async function apiGet(action) {
+      const response = await fetch(`${API_URL}?action=${action}`);
+      const json = await response.json();
+      if (json.status === 'error') throw new Error(json.message);
+      return json.data;
+    }
+
+    async function apiPost(data) {
+      // mode 'no-cors' ou re-routage des requêtes POST si nécessaire
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(data)
+      });
+      const json = await response.json();
+      if (json.status === 'error') throw new Error(json.message);
+      return json.message;
+    }
+
+    function nettoyerSaisieNumerique(champ) {
+      let valeur = champ.value.replace(/,/g, '.');
+      valeur = valeur.replace(/[^0-9.]/g, '');
+      let parties = valeur.split('.');
+      if (parties.length > 2) {
+        valeur = parties[0] + '.' + parties.slice(1).join('');
+      }
+      champ.value = valeur;
+    }
+
+    function showError(message) {
+      const errorBanner = document.getElementById('global-error');
+      document.getElementById('error-text').innerText = message;
+      errorBanner.style.display = 'flex';
+      if(errorTimeout) clearTimeout(errorTimeout);
+      errorTimeout = setTimeout(() => { errorBanner.style.display = 'none'; }, 4000);
+    }
+
+    function switchScreen(screenId) {
+      document.getElementById('global-error').style.display = 'none';
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen();
+      }
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    function basculerPleinEcranApplication() {
+      const doc = window.document;
+      const docEl = doc.documentElement;
+      const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullScreen;
+      const cancelFullScreen = doc.exitFullscreen || doc.webkitExitFullscreen;
+      const icon = document.getElementById('fs-icon');
+
+      if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
+        if (requestFullScreen) {
+          requestFullScreen.call(docEl);
+          icon.innerText = 'fullscreen_exit';
+        } else {
+          showError("Le plein écran n'est pas supporté.");
+        }
+      } else {
+        if (cancelFullScreen) {
+          cancelFullScreen.call(doc);
+          icon.innerText = 'fullscreen';
+        }
+      }
+    }
+
+    function gererPleinEcranCode() {
+      const codeContainer = document.querySelector('.qr-container');
+      const requestFullScreen = codeContainer.requestFullscreen || codeContainer.webkitRequestFullScreen;
+      const cancelFullScreen = document.exitFullscreen || document.webkitExitFullscreen;
+
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (requestFullScreen) {
+          requestFullScreen.call(codeContainer);
+        } else {
+          showError("L'aperçu plein écran n'est pas supporté.");
+        }
+      } else {
+        if (cancelFullScreen) {
+          cancelFullScreen.call(document);
+        }
+      }
+    }
+
+    function analyserPhoto(event) {
+      if (event.target.files.length === 0) return;
+      const fichier = event.target.files[0];
+      const inputTexte = document.getElementById('add-code');
+      const ancienTexte = inputTexte.value;
+      inputTexte.value = "Analyse en cours...";
+
+      const html5QrCode = new Html5Qrcode("reader");
+      
+      html5QrCode.scanFile(fichier, true)
+        .then(decodedText => { inputTexte.value = decodedText; })
+        .catch(err => {
+          inputTexte.value = ancienTexte;
+          showError("Oups ! Aucun code lisible trouvé sur cette image.");
+        });
+      event.target.value = ''; 
+    }
+
+    async function saveNewCard() {
+      const nom = document.getElementById('add-nom').value.trim();
+      const montant = document.getElementById('add-montant').value;
+      const code = document.getElementById('add-code').value.trim();
+      const dateValidite = document.getElementById('add-date').value;
+
+      if(!nom || !montant || !code || code === "Analyse en cours...") {
+        return showError("Veuillez remplir tous les champs obligatoires.");
+      }
+
+      const btnSave = document.getElementById('btn-save-card');
+      const btnBack = document.getElementById('btn-back-card');
+      btnSave.disabled = true;
+      btnBack.disabled = true;
+      btnSave.innerHTML = '<span class="material-icons">sync</span> Enregistrement...';
+
+      try {
+        await apiPost({
+          action: 'ajouterNouvelleCarte',
+          nom: nom,
+          montantInitial: montant,
+          donneesCode: code,
+          dateValidite: dateValidite
+        });
+
+        btnSave.disabled = false;
+        btnBack.disabled = false;
+        btnSave.innerHTML = '<span class="material-icons">save</span> Enregistrer la carte';
+        document.getElementById('add-form-content').style.display = 'none';
+        const successBanner = document.getElementById('add-success');
+        successBanner.style.display = 'flex';
+        
+        document.getElementById('add-nom').value = '';
+        document.getElementById('add-montant').value = '';
+        document.getElementById('add-code').value = '';
+        document.getElementById('add-date').value = '';
+        
+        setTimeout(() => {
+          successBanner.style.display = 'none';
+          document.getElementById('add-form-content').style.display = 'block';
+          switchScreen('screen-menu');
+        }, 2000);
+      } catch(err) {
+        showError("Problème de connexion : " + err.message);
+        btnSave.disabled = false;
+        btnBack.disabled = false;
+        btnSave.innerHTML = '<span class="material-icons">save</span> Enregistrer la carte';
+      }
+    }
+
+    async function openUseScreen() {
+      switchScreen('screen-use-list');
+      document.getElementById('list-cartes-container').innerHTML = '<div class="loading">Recherche des cartes actives...</div>';
+      
+      try {
+        const cartes = await apiGet('obtenirCartesActives');
+        renderCartes(cartes);
+      } catch(err) {
+        showError("Erreur de chargement : " + err.message);
+        document.getElementById('list-cartes-container').innerHTML = '<p style="text-align:center; padding:20px; color:var(--danger);">Impossible de charger la liste. Vérifiez votre tableau.</p>';
+      }
+    }
+
+    function renderCartes(cartes) {
+      const container = document.getElementById('list-cartes-container');
+      container.innerHTML = cartes.length ? '' : '<p style="text-align:center; padding:20px;">Aucune carte active disponible.</p>';
+      
+      cartes.forEach(c => {
+        const dateText = c.dateValidite ? `<br><span style="color:var(--danger); font-size:0.8rem; font-weight:normal;">⌛ Expire le : ${c.dateValidite}</span>` : '';
+        const div = document.createElement('div');
+        div.className = 'card-item';
+        div.innerHTML = `
+          <div class="card-info">
+            <h3>${c.nom}</h3>
+            <p>Solde : <strong>${c.solde}€</strong>${dateText}</p>
+          </div>
+          <button class="btn-select" onclick='selectCard(${JSON.stringify(c)})'>Utiliser</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function selectCard(c) {
+      currentCard = c;
+      switchScreen('screen-use-action');
+      document.getElementById('action-title').innerText = c.nom;
+      document.getElementById('action-solde').innerText = c.solde;
+      document.getElementById('use-montant').value = '';
+
+      const labelValidite = document.getElementById('action-validite');
+      if(c.dateValidite) {
+        labelValidite.innerHTML = `⌛ Expire le : <strong>${c.dateValidite}</strong>`;
+        labelValidite.style.display = 'block';
+      } else {
+        labelValidite.style.display = 'none';
+      }
+
+      modeAffichageCode = 'QR';
+      document.getElementById('qr-code-element').style.display = 'inline-block';
+      document.getElementById('barcode-element').style.display = 'none';
+      document.getElementById('btn-toggle-view').innerHTML = '<span class="material-icons">barcode_reader</span> Afficher en Code-barres';
+
+      const elQr = document.getElementById('qr-code-element');
+      elQr.innerHTML = ''; 
+      new QRCode(elQr, {
+        text: c.donneesCode,
+        width: 200,
+        height: 200,
+        correctLevel : QRCode.CorrectLevel.M 
+      });
+
+      try {
+        JsBarcode("#barcode-element", c.donneesCode, {
+          format: "CODE128",
+          width: 2,
+          height: 80,
+          displayValue: true, 
+          fontSize: 14,
+          margin: 10,
+          background: "#ffffff"
+        });
+      } catch (e) {
+        console.warn("Impossible de générer le code-barres :", e);
+      }
+    }
+
+    function basculerFormatCode() {
+      const btn = document.getElementById('btn-toggle-view');
+      if (modeAffichageCode === 'QR') {
+        modeAffichageCode = 'BARCODE';
+        document.getElementById('qr-code-element').style.display = 'none';
+        document.getElementById('barcode-element').style.display = 'inline-block';
+        btn.innerHTML = '<span class="material-icons">qr_code_2</span> Afficher en QR Code';
+      } else {
+        modeAffichageCode = 'QR';
+        document.getElementById('qr-code-element').style.display = 'inline-block';
+        document.getElementById('barcode-element').style.display = 'none';
+        btn.innerHTML = '<span class="material-icons">barcode_reader</span> Afficher en Code-barres';
+      }
+    }
+
+    async function confirmSpend() {
+      const val = document.getElementById('use-montant').value;
+      if(!val || val <= 0) return showError("Indiquez un montant valide pour la dépense.");
+      if(Number(val) > Number(currentCard.solde)) return showError("Le montant saisi dépasse le solde disponible !");
+
+      const btnSpend = document.getElementById('btn-confirm-spend');
+      const btnBackSpend = document.getElementById('btn-back-spend');
+      btnSpend.disabled = true;
+      btnBackSpend.disabled = true;
+      btnSpend.innerHTML = '<span class="material-icons">sync</span> Mise à jour...';
+
+      try {
+        await apiPost({
+          action: 'utiliserCarte',
+          idCarte: currentCard.id,
+          montantDepense: val
+        });
+
+        btnSpend.disabled = false;
+        btnBackSpend.disabled = false;
+        btnSpend.innerHTML = '<span class="material-icons">done_all</span> Valider la dépense';
+        document.getElementById('use-form-content').style.display = 'none';
+        const successBanner = document.getElementById('use-success');
+        successBanner.style.display = 'flex';
+
+        setTimeout(() => {
+          successBanner.style.display = 'none';
+          document.getElementById('use-form-content').style.display = 'block';
+          openUseScreen();
+        }, 1500);
+      } catch(err) {
+        showError("Erreur lors de la mise à jour : " + err.message);
+        btnSpend.disabled = false;
+        btnBackSpend.disabled = false;
+        btnSpend.innerHTML = '<span class="material-icons">done_all</span> Valider la dépense';
+      }
+    }
+
+    async function openHistoryScreen() {
+      switchScreen('screen-history');
+      document.getElementById('history-container').innerHTML = '<div class="loading">Chargement des données...</div>';
+      try {
+        const history = await apiGet('obtenirHistorique');
+        renderHistory(history);
+      } catch(err) {
+        showError("Erreur de chargement : " + err.message);
+        document.getElementById('history-container').innerHTML = '<p style="text-align:center;">Impossible de charger l\'historique.</p>';
+      }
+    }
+
+    function renderHistory(data) {
+      const container = document.getElementById('history-container');
+      container.innerHTML = data.length ? '' : '<p style="text-align:center;">Aucune action dans l\'historique.</p>';
+      data.forEach(h => {
+        const cl = h.action === 'Ajout' ? 'plus' : 'moins';
+        const sym = h.action === 'Ajout' ? '+' : '-';
+        const div = document.createElement('div');
+        div.className = 'hist-item';
+        div.innerHTML = `
+          <div class="hist-header">
+            <span>${h.nom}</span>
+            <span class="${cl}">${sym}${h.montant}€</span>
+          </div>
+          <div class="hist-meta">
+            <span>Par ${h.user}</span>
+            <span>${h.date}</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
