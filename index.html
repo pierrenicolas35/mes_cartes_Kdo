@@ -91,12 +91,6 @@
       max-width: 90vh;
     }
 
-    .hist-item { padding: 15px; border-bottom: 1px solid #f0f0f0; }
-    .hist-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
-    .hist-meta { display: flex; justify-content: space-between; color: #999; font-size: 0.8rem; }
-    .plus { color: var(--success); }
-    .moins { color: var(--danger); }
-
     .loading { text-align: center; padding: 30px; color: #888; font-style: italic; }
   </style>
 </head>
@@ -115,17 +109,26 @@
       <span id="error-text">Message d'erreur</span>
     </div>
 
+    <!-- ÉCRAN 0 : VERROUILLAGE SÉCURITÉ (PIN) -->
+    <div id="screen-auth" class="screen active">
+      <h2>Accès Sécurisé</h2>
+      <p style="text-align: center; color: #666; margin: 15px 0;">Entrez le code secret familial pour déverrouiller l'application.</p>
+      <div class="form-group">
+        <input type="password" inputmode="numeric" id="auth-pin" placeholder="Code secret" style="text-align:center; font-size:1.5rem; letter-spacing: 5px;">
+      </div>
+      <button class="btn btn-submit" onclick="validerCodePin()">
+        <span class="material-icons">lock_open</span> Accéder
+      </button>
+    </div>
+
     <!-- ÉCRAN 1 : MENU PRINCIPAL -->
-    <div id="screen-menu" class="screen active">
+    <div id="screen-menu" class="screen">
       <div class="menu-grid">
         <button class="menu-btn" onclick="switchScreen('screen-add')">
           <span class="material-icons">add_a_photo</span> Ajouter une carte
         </button>
         <button class="menu-btn" onclick="openUseScreen()">
           <span class="material-icons">qr_code_scanner</span> Utiliser une carte
-        </button>
-        <button class="menu-btn" onclick="openHistoryScreen()">
-          <span class="material-icons">history</span> Historique
         </button>
       </div>
     </div>
@@ -218,33 +221,42 @@
       </div>
     </div>
 
-    <!-- ÉCRAN 5 : HISTORIQUE -->
-    <div id="screen-history" class="screen">
-      <h2>Historique</h2>
-      <div id="history-container" class="item-list"></div>
-      <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
-    </div>
-
   </div>
 
   <script>
-    // URL DE VOTRE API GOOGLE APPS SCRIPT
-    const API_URL = 'https://script.google.com/macros/s/AKfycbwxJIhCptWawA9gafafm37mCg-OahpWLi38whRSTRugaGcnS4u5zBRsRCqen8OxofQv6Q/exec';
+    // COLLEZ VOTRE URL APPS SCRIPT ICI
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxVs-TLPxdvLlt15NIR1djFEAj_8pNub-jeZe6NI_knwJPm463f7rpneiA5hCjOHiDXRA/exec';
 
     let currentCard = null;
     let errorTimeout = null;
     let modeAffichageCode = 'QR'; 
+    let userPin = localStorage.getItem('app_cartes_pin') || '';
 
-    // --- FONCTIONS DE COMMUNICATION API (FETCH) ---
+    window.onload = () => {
+      if (userPin) {
+        document.getElementById('auth-pin').value = userPin;
+        validerCodePin();
+      }
+    };
+
+    function validerCodePin() {
+      const pinInput = document.getElementById('auth-pin').value.trim();
+      if (!pinInput) return showError("Veuillez saisir un code secret.");
+      
+      userPin = pinInput;
+      localStorage.setItem('app_cartes_pin', userPin);
+      switchScreen('screen-menu');
+    }
+
     async function apiGet(action) {
-      const response = await fetch(`${API_URL}?action=${action}`);
+      const response = await fetch(`${API_URL}?action=${action}&pin=${encodeURIComponent(userPin)}`);
       const json = await response.json();
       if (json.status === 'error') throw new Error(json.message);
       return json.data;
     }
 
     async function apiPost(data) {
-      // mode 'no-cors' ou re-routage des requêtes POST si nécessaire
+      data.pin = userPin;
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -271,6 +283,12 @@
       errorBanner.style.display = 'flex';
       if(errorTimeout) clearTimeout(errorTimeout);
       errorTimeout = setTimeout(() => { errorBanner.style.display = 'none'; }, 4000);
+      
+      if (message.includes("Code PIN incorrect")) {
+        localStorage.removeItem('app_cartes_pin');
+        userPin = '';
+        switchScreen('screen-auth');
+      }
     }
 
     function switchScreen(screenId) {
@@ -383,7 +401,7 @@
           switchScreen('screen-menu');
         }, 2000);
       } catch(err) {
-        showError("Problème de connexion : " + err.message);
+        showError("Problème : " + err.message);
         btnSave.disabled = false;
         btnBack.disabled = false;
         btnSave.innerHTML = '<span class="material-icons">save</span> Enregistrer la carte';
@@ -398,8 +416,8 @@
         const cartes = await apiGet('obtenirCartesActives');
         renderCartes(cartes);
       } catch(err) {
-        showError("Erreur de chargement : " + err.message);
-        document.getElementById('list-cartes-container').innerHTML = '<p style="text-align:center; padding:20px; color:var(--danger);">Impossible de charger la liste. Vérifiez votre tableau.</p>';
+        showError("Erreur : " + err.message);
+        document.getElementById('list-cartes-container').innerHTML = '<p style="text-align:center; padding:20px; color:var(--danger);">Impossible de charger la liste.</p>';
       }
     }
 
@@ -512,45 +530,11 @@
           openUseScreen();
         }, 1500);
       } catch(err) {
-        showError("Erreur lors de la mise à jour : " + err.message);
+        showError("Erreur : " + err.message);
         btnSpend.disabled = false;
         btnBackSpend.disabled = false;
         btnSpend.innerHTML = '<span class="material-icons">done_all</span> Valider la dépense';
       }
-    }
-
-    async function openHistoryScreen() {
-      switchScreen('screen-history');
-      document.getElementById('history-container').innerHTML = '<div class="loading">Chargement des données...</div>';
-      try {
-        const history = await apiGet('obtenirHistorique');
-        renderHistory(history);
-      } catch(err) {
-        showError("Erreur de chargement : " + err.message);
-        document.getElementById('history-container').innerHTML = '<p style="text-align:center;">Impossible de charger l\'historique.</p>';
-      }
-    }
-
-    function renderHistory(data) {
-      const container = document.getElementById('history-container');
-      container.innerHTML = data.length ? '' : '<p style="text-align:center;">Aucune action dans l\'historique.</p>';
-      data.forEach(h => {
-        const cl = h.action === 'Ajout' ? 'plus' : 'moins';
-        const sym = h.action === 'Ajout' ? '+' : '-';
-        const div = document.createElement('div');
-        div.className = 'hist-item';
-        div.innerHTML = `
-          <div class="hist-header">
-            <span>${h.nom}</span>
-            <span class="${cl}">${sym}${h.montant}€</span>
-          </div>
-          <div class="hist-meta">
-            <span>Par ${h.user}</span>
-            <span>${h.date}</span>
-          </div>
-        `;
-        container.appendChild(div);
-      });
     }
   </script>
 </body>
