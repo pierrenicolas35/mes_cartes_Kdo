@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mes Cartes Cadeaux</title>
+  
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#2b5876">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
+
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -33,9 +34,6 @@
 
     header { display: flex; justify-content: center; align-items: center; padding: 10px 0; position: relative; width: 100%; }
     header h1 { font-size: 1.4rem; color: var(--primary); }
-    
-    .fs-toggle-btn { background: none; border: none; color: var(--primary); cursor: pointer; position: absolute; right: 5px; display: flex; align-items: center; justify-content: center; padding: 5px; }
-    .fs-toggle-btn .material-icons { font-size: 1.6rem; }
 
     .screen { display: none; background: var(--card-bg); border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); animation: fadeIn 0.3s ease; }
     .screen.active { display: block; }
@@ -95,6 +93,12 @@
       max-width: 90vh;
     }
 
+    .hist-item { padding: 15px; border-bottom: 1px solid #f0f0f0; }
+    .hist-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
+    .hist-meta { display: flex; justify-content: space-between; color: #999; font-size: 0.8rem; }
+    .plus { color: var(--success); }
+    .moins { color: var(--danger); }
+
     .loading { text-align: center; padding: 30px; color: #888; font-style: italic; }
   </style>
 </head>
@@ -103,9 +107,6 @@
   <div class="app-container">
     <header>
       <h1>🎁 Nos Cartes Cadeaux</h1>
-      <button class="fs-toggle-btn" onclick="basculerPleinEcranApplication()">
-        <span class="material-icons" id="fs-icon">fullscreen</span>
-      </button>
     </header>
 
     <div id="global-error" class="banner error-banner">
@@ -133,6 +134,9 @@
         </button>
         <button class="menu-btn" onclick="openUseScreen()">
           <span class="material-icons">qr_code_scanner</span> Utiliser une carte
+        </button>
+        <button class="menu-btn" onclick="openHistoryScreen()">
+          <span class="material-icons">history</span> Historique
         </button>
       </div>
     </div>
@@ -225,11 +229,18 @@
       </div>
     </div>
 
+    <!-- ÉCRAN 5 : HISTORIQUE -->
+    <div id="screen-history" class="screen">
+      <h2>Historique</h2>
+      <div id="history-container" class="item-list"></div>
+      <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
+    </div>
+
   </div>
 
   <script>
     // COLLEZ VOTRE URL APPS SCRIPT ICI
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxVs-TLPxdvLlt15NIR1djFEAj_8pNub-jeZe6NI_knwJPm463f7rpneiA5hCjOHiDXRA/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwxJIhCptWawA9gafafm37mCg-OahpWLi38whRSTRugaGcnS4u5zBRsRCqen8OxofQv6Q/exec';
 
     let currentCard = null;
     let errorTimeout = null;
@@ -302,28 +313,6 @@
       }
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
-    }
-
-    function basculerPleinEcranApplication() {
-      const doc = window.document;
-      const docEl = doc.documentElement;
-      const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullScreen;
-      const cancelFullScreen = doc.exitFullscreen || doc.webkitExitFullscreen;
-      const icon = document.getElementById('fs-icon');
-
-      if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
-        if (requestFullScreen) {
-          requestFullScreen.call(docEl);
-          icon.innerText = 'fullscreen_exit';
-        } else {
-          showError("Le plein écran n'est pas supporté.");
-        }
-      } else {
-        if (cancelFullScreen) {
-          cancelFullScreen.call(doc);
-          icon.innerText = 'fullscreen';
-        }
-      }
     }
 
     function gererPleinEcranCode() {
@@ -405,7 +394,7 @@
           switchScreen('screen-menu');
         }, 2000);
       } catch(err) {
-        showError("Problème : " + err.message);
+        showError("Erreur : " + err.message);
         btnSave.disabled = false;
         btnBack.disabled = false;
         btnSave.innerHTML = '<span class="material-icons">save</span> Enregistrer la carte';
@@ -539,6 +528,40 @@
         btnBackSpend.disabled = false;
         btnSpend.innerHTML = '<span class="material-icons">done_all</span> Valider la dépense';
       }
+    }
+
+    async function openHistoryScreen() {
+      switchScreen('screen-history');
+      document.getElementById('history-container').innerHTML = '<div class="loading">Chargement des données...</div>';
+      try {
+        const history = await apiGet('obtenirHistorique');
+        renderHistory(history);
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        document.getElementById('history-container').innerHTML = '<p style="text-align:center; padding:20px; color:var(--danger);">Impossible de charger l\'historique.</p>';
+      }
+    }
+
+    function renderHistory(data) {
+      const container = document.getElementById('history-container');
+      container.innerHTML = data.length ? '' : '<p style="text-align:center; padding:20px;">Aucune action dans l\'historique.</p>';
+      data.forEach(h => {
+        const cl = h.action === 'Ajout' ? 'plus' : 'moins';
+        const sym = h.action === 'Ajout' ? '+' : '-';
+        const div = document.createElement('div');
+        div.className = 'hist-item';
+        div.innerHTML = `
+          <div class="hist-header">
+            <span>${h.nom}</span>
+            <span class="${cl}">${sym}${h.montant}€</span>
+          </div>
+          <div class="hist-meta">
+            <span>Par ${h.user}</span>
+            <span>${h.date}</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
     }
   </script>
 </body>
