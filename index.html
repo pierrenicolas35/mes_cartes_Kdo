@@ -19,11 +19,13 @@
     :root {
       --primary: #2b5876;
       --secondary: #4e4376;
-      --background: #f7f9fc;
-      --text: #333;
+      --background: #f4f7fb;
+      --text: #2c3e50;
       --card-bg: #ffffff;
       --success: #2e7d32;
       --danger: #d32f2f;
+      --radius: 20px;
+      --shadow: 0 10px 25px rgba(43, 88, 118, 0.08);
     }
     
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -46,36 +48,147 @@
 
     .app-container {
       width: 100%;
-      max-width: 500px;
+      max-width: 480px;
       height: 100%;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
 
     header {
       display: flex;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
-      padding: 8px 0;
+      padding: 8px 5px;
       flex-shrink: 0;
     }
-    header h1 { font-size: 1.3rem; color: var(--primary); }
+    header h1 { font-size: 1.3rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 8px; }
 
-    /* Conteneur écran 100% Adaptatif */
     .screen {
       display: none;
-      background: var(--card-bg);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-      animation: fadeIn 0.25s ease;
+      background: transparent;
       flex: 1;
       flex-direction: column;
-      min-height: 0; /* Essentiel pour le scroll flexbox */
+      min-height: 0;
       overflow: hidden;
     }
     .screen.active { display: flex; }
+
+    /* Style spécifique de la page d'accueil moderne */
+    .home-dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Carte KPI de résumé */
+    .kpi-card {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: 0 12px 28px rgba(43, 88, 118, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::after {
+      content: 'card_giftcard';
+      font-family: 'Material Icons';
+      position: absolute;
+      right: -15px;
+      bottom: -20px;
+      font-size: 8rem;
+      opacity: 0.08;
+      color: white;
+    }
+    .kpi-header { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; }
+    .kpi-value { font-size: 2.2rem; font-weight: 800; }
+    .kpi-sub { font-size: 0.85rem; opacity: 0.9; display: flex; align-items: center; gap: 5px; }
+
+    /* Actions Dashboard */
+    .action-section-title { font-size: 0.9rem; font-weight: 700; color: #8898aa; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px; }
+
+    /* Bouton principal HERO */
+    .hero-action-btn {
+      background: white;
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      box-shadow: var(--shadow);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    .hero-action-btn:active { transform: scale(0.98); border-color: var(--primary); }
+    .hero-icon-box {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: #eef4f8;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .hero-icon-box .material-icons { font-size: 2rem; }
+    .hero-text h3 { font-size: 1.15rem; color: var(--text); font-weight: 700; margin-bottom: 2px; }
+    .hero-text p { font-size: 0.85rem; color: #7a8b9e; }
+
+    /* Grille 2 colonnes pour actions secondaires */
+    .secondary-actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .grid-action-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .grid-action-card:active { transform: scale(0.97); }
+    .grid-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .grid-icon-box.add { background: #e8f5e9; color: var(--success); }
+    .grid-icon-box.hist { background: #f3e5f5; color: var(--secondary); }
+    .grid-action-card h4 { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+    .grid-action-card p { font-size: 0.78rem; color: #8898aa; }
+
+    /* Footer discret */
+    .home-footer { text-align: center; font-size: 0.75rem; color: #a0aec0; margin-top: auto; padding: 10px 0; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+    /* Style des fenêtres internes */
+    .internal-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
@@ -83,10 +196,6 @@
     .banner { display: none; padding: 12px; border-radius: 12px; text-align: center; font-weight: 600; margin-bottom: 12px; align-items: center; justify-content: center; gap: 8px; animation: slideDown 0.3s ease; width: 100%; flex-shrink: 0; }
     .success-banner { background-color: #e8f5e9; color: var(--success); }
     .error-banner { background-color: #ffebee; color: var(--danger); }
-
-    .menu-grid { display: flex; flex-direction: column; gap: 15px; justify-content: center; flex: 1; }
-    .menu-btn { display: flex; align-items: center; gap: 18px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; padding: 20px; border-radius: 16px; font-size: 1.05rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(78, 67, 118, 0.2); }
-    .menu-btn .material-icons { font-size: 2rem; }
 
     .screen-content { flex: 1; overflow-y: auto; padding-right: 2px; display: flex; flex-direction: column; gap: 12px; }
 
@@ -103,7 +212,6 @@
     .btn-gallery { background-color: var(--primary); color: white; width: auto; padding: 10px 14px; }
     .btn-toggle-code { background-color: #e0e0e0; color: #333; padding: 10px; font-size: 0.85rem; margin-top: 8px; }
 
-    /* Liste adaptative à défilement fluide */
     .item-list { display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 2px; }
     .card-item { padding: 16px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
     .card-info h3 { font-size: 1.05rem; color: #222; }
@@ -133,7 +241,7 @@
 
   <div class="app-container">
     <header>
-      <h1>🎁 Nos Cartes Cadeaux</h1>
+      <h1><span class="material-icons">card_giftcard</span> Mes Cartes</h1>
     </header>
 
     <div id="global-error" class="banner error-banner">
@@ -143,126 +251,179 @@
 
     <!-- ÉCRAN 0 : PIN -->
     <div id="screen-auth" class="screen active">
-      <h2 style="text-align: center;">Accès Sécurisé</h2>
-      <p style="text-align: center; color: #666; margin: 15px 0; font-size:0.9rem;">Entrez le code secret familial pour déverrouiller.</p>
-      <div class="form-group">
-        <input type="password" inputmode="numeric" id="auth-pin" placeholder="Code secret" style="text-align:center; font-size:1.5rem; letter-spacing: 5px;">
+      <div class="internal-card">
+        <h2 style="text-align: center; color: var(--primary);">Accès Sécurisé</h2>
+        <p style="text-align: center; color: #666; margin: 15px 0; font-size:0.9rem;">Entrez le code secret familial pour déverrouiller.</p>
+        <div class="form-group">
+          <input type="password" inputmode="numeric" id="auth-pin" placeholder="Code secret" style="text-align:center; font-size:1.5rem; letter-spacing: 5px;">
+        </div>
+        <button class="btn btn-submit" onclick="validerCodePin()">
+          <span class="material-icons">lock_open</span> Accéder
+        </button>
       </div>
-      <button class="btn btn-submit" onclick="validerCodePin()">
-        <span class="material-icons">lock_open</span> Accéder
-      </button>
     </div>
 
-    <!-- ÉCRAN 1 : MENU PRINCIPAL -->
+    <!-- ÉCRAN 1 : DASHBOARD D'ACCUEIL REDESSINÉ -->
     <div id="screen-menu" class="screen">
-      <div class="menu-grid">
-        <button class="menu-btn" onclick="switchScreen('screen-add')">
-          <span class="material-icons">add_a_photo</span> Ajouter une carte
-        </button>
-        <button class="menu-btn" onclick="openUseScreen()">
-          <span class="material-icons">qr_code_scanner</span> Utiliser une carte
-        </button>
-        <button class="menu-btn" onclick="openHistoryScreen()">
-          <span class="material-icons">history</span> Historique
-        </button>
+      <div class="home-dashboard">
+        
+        <!-- KPI Card -->
+        <div class="kpi-card">
+          <div class="kpi-header">Portefeuille Familial</div>
+          <div class="kpi-value" id="dash-total-solde">-- €</div>
+          <div class="kpi-sub">
+            <span class="material-icons" style="font-size:1rem;">check_circle</span>
+            <span id="dash-nb-cartes">-- cartes disponibles</span>
+          </div>
+        </div>
+
+        <div class="action-section-title">Actions rapides</div>
+
+        <!-- Bouton Hero Principal -->
+        <div class="hero-action-btn" onclick="openUseScreen()">
+          <div class="hero-icon-box">
+            <span class="material-icons">qr_code_scanner</span>
+          </div>
+          <div class="hero-text">
+            <h3>Utiliser une carte</h3>
+            <p>Scanner un QR code en caisse</p>
+          </div>
+        </div>
+
+        <!-- Grille d'actions secondaires -->
+        <div class="secondary-actions-grid">
+          <div class="grid-action-card" onclick="switchScreen('screen-add')">
+            <div class="grid-icon-box add">
+              <span class="material-icons">add_a_photo</span>
+            </div>
+            <div>
+              <h4>Ajouter</h4>
+              <p>Nouvelle carte</p>
+            </div>
+          </div>
+
+          <div class="grid-action-card" onclick="openHistoryScreen()">
+            <div class="grid-icon-box hist">
+              <span class="material-icons">history</span>
+            </div>
+            <div>
+              <h4>Historique</h4>
+              <p>Suivi des dépenses</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="home-footer">
+          <span class="material-icons" style="font-size:0.9rem;">verified_user</span> Synchronisé & Sécurisé
+        </div>
+
       </div>
     </div>
 
     <!-- ÉCRAN 2 : AJOUTER UNE CARTE -->
     <div id="screen-add" class="screen">
-      <h2>Nouvelle Carte</h2>
-      
-      <div id="add-success" class="banner success-banner">
-        <span class="material-icons">check_circle</span> Carte enregistrée !
-      </div>
+      <div class="internal-card">
+        <h2>Nouvelle Carte</h2>
+        
+        <div id="add-success" class="banner success-banner">
+          <span class="material-icons">check_circle</span> Carte enregistrée !
+        </div>
 
-      <div class="screen-content" id="add-form-content">
-        <div class="form-group" style="margin-top:5px;">
-          <label>Enseigne / Magasin</label>
-          <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon...">
-        </div>
-        <div class="form-group">
-          <label>Montant Initial (€)</label>
-          <input type="text" inputmode="decimal" id="add-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
-        </div>
-        <div class="form-group">
-          <label>Date de validité (Optionnel)</label>
-          <input type="date" id="add-date">
-        </div>
-        <div class="form-group">
-          <label>Données du QR/Code-barres</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="add-code" placeholder="Texte du code" style="flex: 1;">
-            
-            <button class="btn btn-camera" onclick="document.getElementById('qr-input-camera').click()" title="Photo">
-              <span class="material-icons">photo_camera</span>
-            </button>
-            <button class="btn btn-gallery" onclick="document.getElementById('qr-input-gallery').click()" title="Screenshot">
-              <span class="material-icons">image</span>
-            </button>
-            
-            <input type="file" id="qr-input-camera" accept="image/*" capture="environment" style="display:none" onchange="analyserPhoto(event)">
-            <input type="file" id="qr-input-gallery" accept="image/*" style="display:none" onchange="analyserPhoto(event)">
+        <div class="screen-content" id="add-form-content">
+          <div class="form-group" style="margin-top:5px;">
+            <label>Enseigne / Magasin</label>
+            <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon...">
           </div>
-          <div id="reader" style="display:none;"></div>
+          <div class="form-group">
+            <label>Montant Initial (€)</label>
+            <input type="text" inputmode="decimal" id="add-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
+          </div>
+          <div class="form-group">
+            <label>Date de validité (Optionnel)</label>
+            <input type="date" id="add-date">
+          </div>
+          <div class="form-group">
+            <label>Données du QR/Code-barres</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="add-code" placeholder="Texte du code" style="flex: 1;">
+              
+              <button class="btn btn-camera" onclick="document.getElementById('qr-input-camera').click()" title="Photo">
+                <span class="material-icons">photo_camera</span>
+              </button>
+              <button class="btn btn-gallery" onclick="document.getElementById('qr-input-gallery').click()" title="Screenshot">
+                <span class="material-icons">image</span>
+              </button>
+              
+              <input type="file" id="qr-input-camera" accept="image/*" capture="environment" style="display:none" onchange="analyserPhoto(event)">
+              <input type="file" id="qr-input-gallery" accept="image/*" style="display:none" onchange="analyserPhoto(event)">
+            </div>
+            <div id="reader" style="display:none;"></div>
+          </div>
         </div>
+        
+        <button class="btn btn-submit" id="btn-save-card" onclick="saveNewCard()">
+          <span class="material-icons">save</span> Enregistrer la carte
+        </button>
+        <button class="btn btn-back" id="btn-back-card" onclick="switchScreen('screen-menu')">Retour</button>
       </div>
-      
-      <button class="btn btn-submit" id="btn-save-card" onclick="saveNewCard()">
-        <span class="material-icons">save</span> Enregistrer la carte
-      </button>
-      <button class="btn btn-back" id="btn-back-card" onclick="switchScreen('screen-menu')">Retour</button>
     </div>
 
     <!-- ÉCRAN 3 : SÉLECTION DE CARTE -->
     <div id="screen-use-list" class="screen">
-      <h2>Choisir une carte</h2>
-      <div id="list-cartes-container" class="item-list"></div>
-      <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
+      <div class="internal-card">
+        <h2>Choisir une carte</h2>
+        <div id="list-cartes-container" class="item-list"></div>
+        <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
+      </div>
     </div>
 
     <!-- ÉCRAN 4 : DÉBIT ET APERÇU -->
     <div id="screen-use-action" class="screen">
-      <h2 id="action-title" style="text-align: center;">...</h2>
-      
-      <div id="use-success" class="banner success-banner">
-        <span class="material-icons">check_circle</span> Solde mis à jour !
-      </div>
-
-      <div class="screen-content" id="use-form-content">
-        <p style="text-align: center; margin: 4px 0; color:#666;">
-          Solde : <span id="action-solde" style="font-weight:bold; color: var(--primary); font-size: 1.15rem;">0</span>€
-        </p>
-        <p id="action-validite" style="text-align: center; margin-bottom: 4px; color: var(--danger); font-size: 0.85rem; display: none;"></p>
+      <div class="internal-card">
+        <h2 id="action-title" style="text-align: center;">...</h2>
         
-        <p style="text-align:center; font-size:0.75rem; color:#888;">Cliquez sur le code pour le plein écran</p>
-        
-        <div class="qr-container" onclick="gererPleinEcranCode()">
-          <div id="qr-code-element"></div>
-          <svg id="barcode-element"></svg>
+        <div id="use-success" class="banner success-banner">
+          <span class="material-icons">check_circle</span> Solde mis à jour !
         </div>
-        
-        <button class="btn btn-toggle-code" id="btn-toggle-view" onclick="basculerFormatCode()">
-          <span class="material-icons">barcode_reader</span> Afficher en Code-barres
+
+        <div class="screen-content" id="use-form-content">
+          <p style="text-align: center; margin: 4px 0; color:#666;">
+            Solde : <span id="action-solde" style="font-weight:bold; color: var(--primary); font-size: 1.15rem;">0</span>€
+          </p>
+          <p id="action-validite" style="text-align: center; margin-bottom: 4px; color: var(--danger); font-size: 0.85rem; display: none;"></p>
+          
+          <p style="text-align:center; font-size:0.75rem; color:#888;">Cliquez sur le code pour le plein écran</p>
+          
+          <div class="qr-container" onclick="gererPleinEcranCode()">
+            <div id="qr-code-element"></div>
+            <svg id="barcode-element"></svg>
+          </div>
+          
+          <button class="btn btn-toggle-code" id="btn-toggle-view" onclick="basculerFormatCode()">
+            <span class="material-icons">barcode_reader</span> Afficher en Code-barres
+          </button>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label>Montant utilisé (€)</label>
+            <input type="text" inputmode="decimal" id="use-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
+          </div>
+        </div>
+
+        <button class="btn btn-submit" id="btn-confirm-spend" onclick="confirmSpend()">
+          <span class="material-icons">done_all</span> Valider la dépense
         </button>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label>Montant utilisé (€)</label>
-          <input type="text" inputmode="decimal" id="use-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
-        </div>
+        <button class="btn btn-back" id="btn-back-spend" onclick="openUseScreen()">Retour</button>
       </div>
-
-      <button class="btn btn-submit" id="btn-confirm-spend" onclick="confirmSpend()">
-        <span class="material-icons">done_all</span> Valider la dépense
-      </button>
-      <button class="btn btn-back" id="btn-back-spend" onclick="openUseScreen()">Retour</button>
     </div>
 
     <!-- ÉCRAN 5 : HISTORIQUE -->
     <div id="screen-history" class="screen">
-      <h2>Historique</h2>
-      <div id="history-container" class="item-list"></div>
-      <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
+      <div class="internal-card">
+        <h2>Historique</h2>
+        <div id="history-container" class="item-list"></div>
+        <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
+      </div>
     </div>
 
   </div>
@@ -289,7 +450,6 @@
   </div>
 
   <script>
-    // COLLEZ VOTRE URL APPS SCRIPT ICI
     const API_URL = 'https://script.google.com/macros/s/AKfycbxVs-TLPxdvLlt15NIR1djFEAj_8pNub-jeZe6NI_knwJPm463f7rpneiA5hCjOHiDXRA/exec';
 
     let currentCard = null;
@@ -312,6 +472,7 @@
       userPin = pinInput;
       localStorage.setItem('app_cartes_pin', userPin);
       switchScreen('screen-menu');
+      chargerDashboard();
     }
 
     async function apiGet(action) {
@@ -331,6 +492,17 @@
       const json = await response.json();
       if (json.status === 'error') throw new Error(json.message);
       return json.message;
+    }
+
+    async function chargerDashboard() {
+      try {
+        const cartes = await apiGet('obtenirCartesActives');
+        const total = cartes.reduce((sum, c) => sum + Number(c.solde), 0);
+        document.getElementById('dash-total-solde').innerText = total.toFixed(2) + ' €';
+        document.getElementById('dash-nb-cartes').innerText = `${cartes.length} carte${cartes.length > 1 ? 's' : ''} active${cartes.length > 1 ? 's' : ''}`;
+      } catch (e) {
+        document.getElementById('dash-total-solde').innerText = '-- €';
+      }
     }
 
     function nettoyerSaisieNumerique(champ) {
@@ -361,6 +533,7 @@
       document.getElementById('global-error').style.display = 'none';
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
+      if (screenId === 'screen-menu') chargerDashboard();
     }
 
     function gererPleinEcranCode() {
