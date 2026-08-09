@@ -30,27 +30,28 @@
 
     body { background-color: var(--background); color: var(--text); padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
 
-    .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 20px; }
+    .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 15px; flex: 1; }
 
-    header { display: flex; justify-content: center; align-items: center; padding: 10px 0; position: relative; width: 100%; }
+    header { display: flex; justify-content: center; align-items: center; padding: 5px 0; position: relative; width: 100%; }
     header h1 { font-size: 1.4rem; color: var(--primary); }
 
-    .screen { display: none; background: var(--card-bg); border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); animation: fadeIn 0.3s ease; }
-    .screen.active { display: block; }
+    /* Ajustement flexbox pour occuper tout l'écran */
+    .screen { display: none; background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); animation: fadeIn 0.3s ease; flex: 1; flex-direction: column; }
+    .screen.active { display: flex; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
-    .banner { display: none; padding: 16px; border-radius: 12px; text-align: center; font-weight: 600; margin-bottom: 20px; align-items: center; justify-content: center; gap: 10px; animation: slideDown 0.3s ease; width: 100%; }
+    .banner { display: none; padding: 16px; border-radius: 12px; text-align: center; font-weight: 600; margin-bottom: 15px; align-items: center; justify-content: center; gap: 10px; animation: slideDown 0.3s ease; width: 100%; }
     .success-banner { background-color: #e8f5e9; color: var(--success); }
     .error-banner { background-color: #ffebee; color: var(--danger); }
     .banner .material-icons { font-size: 1.8rem; }
 
-    .menu-grid { display: flex; flex-direction: column; gap: 15px; }
+    .menu-grid { display: flex; flex-direction: column; gap: 15px; justify-content: center; flex: 1; }
     .menu-btn { display: flex; align-items: center; gap: 20px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; padding: 22px; border-radius: 16px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(78, 67, 118, 0.2); }
     .menu-btn .material-icons { font-size: 2.2rem; }
 
-    .form-group { margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
     label { display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; color: #555; }
     input { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; background-color: #fafafa; }
 
@@ -62,11 +63,12 @@
     .btn-gallery { background-color: var(--primary); color: white; width: auto; padding: 12px; }
     .btn-toggle-code { background-color: #e0e0e0; color: #333; padding: 10px; font-size: 0.9rem; margin-top: 10px; }
 
-    .item-list { display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto; margin: 15px 0; }
+    /* Suppression de la hauteur maximale fixe (max-height: 400px) pour occuper tout l'écran */
+    .item-list { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow-y: auto; margin: 15px 0; padding-right: 2px; }
     .card-item { padding: 18px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
     .card-info h3 { font-size: 1.1rem; color: #222; }
     .card-info p { font-size: 0.9rem; color: #777; }
-    .btn-select { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; }
+    .btn-select { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
 
     .qr-container { text-align: center; margin: 10px 0 5px 0; background: #f9f9f9; padding: 15px; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; cursor: pointer; transition: background 0.2s; }
     .qr-container:hover { background: #f0f0f0; }
@@ -74,32 +76,21 @@
     #qr-code-element img { margin: 0 auto; max-width: 100%; }
     #barcode-element { max-width: 100%; height: auto; display: none; }
 
-    .qr-container:fullscreen, .qr-container:-webkit-full-screen {
-      background-color: white !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      border-radius: 0 !important;
-    }
-    .qr-container:fullscreen #qr-code-element, .qr-container:-webkit-full-screen #qr-code-element {
-      transform: scale(1.5);
-    }
-    .qr-container:fullscreen #barcode-element, .qr-container:-webkit-full-screen #barcode-element {
-      transform: scale(1.3) rotate(90deg);
-      max-width: 90vh;
-    }
+    .hist-item { padding: 15px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+    .hist-details { flex: 1; }
+    .hist-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; padding-right: 10px; }
+    .hist-meta { display: flex; justify-content: space-between; color: #999; font-size: 0.8rem; padding-right: 10px; }
+    .btn-edit-hist { background: none; border: none; color: var(--primary); cursor: pointer; padding: 8px; border-radius: 8px; }
+    .btn-edit-hist:hover { background-color: #f0f4f8; }
 
-    .hist-item { padding: 15px; border-bottom: 1px solid #f0f0f0; }
-    .hist-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
-    .hist-meta { display: flex; justify-content: space-between; color: #999; font-size: 0.8rem; }
     .plus { color: var(--success); }
     .moins { color: var(--danger); }
 
     .loading { text-align: center; padding: 30px; color: #888; font-style: italic; }
+
+    /* Modal d'édition */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
   </style>
 </head>
 <body>
@@ -150,7 +141,7 @@
       </div>
 
       <div id="add-form-content">
-        <div class="form-group" style="margin-top:20px;">
+        <div class="form-group" style="margin-top:10px;">
           <label>Enseigne / Magasin</label>
           <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon...">
         </div>
@@ -207,7 +198,7 @@
         </p>
         <p id="action-validite" style="text-align: center; margin-bottom: 5px; color: var(--danger); font-size: 0.9rem; display: none;"></p>
         
-        <p style="text-align:center; font-size:0.8rem; color:#888; margin-top:10px;">Cliquez sur le code pour le plein écran</p>
+        <p style="text-align:center; font-size:0.8rem; color:#888; margin-top:5px;">Cliquez sur le code pour le plein écran</p>
         
         <div class="qr-container" onclick="gererPleinEcranCode()">
           <div id="qr-code-element"></div>
@@ -229,7 +220,7 @@
       </div>
     </div>
 
-    <!-- ÉCRAN 5 : HISTORIQUE -->
+    <!-- ÉCRAN 5 : HISTORIQUE PLEIN ÉCRAN -->
     <div id="screen-history" class="screen">
       <h2>Historique</h2>
       <div id="history-container" class="item-list"></div>
@@ -238,14 +229,31 @@
 
   </div>
 
+  <!-- MODAL D'ÉDITION D'UNE LIGNE D'HISTORIQUE -->
+  <div id="modal-edit" class="modal-overlay">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 15px; color: var(--primary);">Modifier le montant</h3>
+      <p id="modal-desc" style="font-size: 0.9rem; color: #666; margin-bottom: 15px;"></p>
+      <div class="form-group">
+        <label>Nouveau montant (€)</label>
+        <input type="text" inputmode="decimal" id="edit-montant-input" oninput="nettoyerSaisieNumerique(this)">
+      </div>
+      <button class="btn btn-submit" id="btn-save-edit" onclick="sauvegarderModificationHistorique()">
+        <span class="material-icons">check</span> Enregistrer
+      </button>
+      <button class="btn btn-back" onclick="fermerModalEdit()">Annuler</button>
+    </div>
+  </div>
+
   <script>
     // COLLEZ VOTRE URL APPS SCRIPT ICI
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxVs-TLPxdvLlt15NIR1djFEAj_8pNub-jeZe6NI_knwJPm463f7rpneiA5hCjOHiDXRA/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwxJIhCptWawA9gafafm37mCg-OahpWLi38whRSTRugaGcnS4u5zBRsRCqen8OxofQv6Q/exec';
 
     let currentCard = null;
     let errorTimeout = null;
     let modeAffichageCode = 'QR'; 
     let userPin = localStorage.getItem('app_cartes_pin') || '';
+    let currentEditIndex = null;
 
     window.onload = () => {
       if (userPin) {
@@ -308,9 +316,6 @@
 
     function switchScreen(screenId) {
       document.getElementById('global-error').style.display = 'none';
-      if (document.fullscreenElement || document.webkitFullscreenElement) {
-        document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen();
-      }
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
     }
@@ -551,17 +556,63 @@
         const div = document.createElement('div');
         div.className = 'hist-item';
         div.innerHTML = `
-          <div class="hist-header">
-            <span>${h.nom}</span>
-            <span class="${cl}">${sym}${h.montant}€</span>
+          <div class="hist-details">
+            <div class="hist-header">
+              <span>${h.nom} (${h.action})</span>
+              <span class="${cl}">${sym}${h.montant}€</span>
+            </div>
+            <div class="hist-meta">
+              <span>Par ${h.user}</span>
+              <span>${h.date}</span>
+            </div>
           </div>
-          <div class="hist-meta">
-            <span>Par ${h.user}</span>
-            <span>${h.date}</span>
-          </div>
+          <button class="btn-edit-hist" onclick='ouvrirModalEdit(${h.indexLigne}, "${h.nom}", ${h.montant})' title="Modifier">
+            <span class="material-icons">edit</span>
+          </button>
         `;
         container.appendChild(div);
       });
+    }
+
+    // --- LOGIQUE DE MODIFICATION DE L'HISTORIQUE ---
+    function ouvrirModalEdit(indexLigne, nom, montantActuel) {
+      currentEditIndex = indexLigne;
+      document.getElementById('modal-desc').innerText = `Modification pour : ${nom}`;
+      document.getElementById('edit-montant-input').value = montantActuel;
+      document.getElementById('modal-edit').style.display = 'flex';
+    }
+
+    function fermerModalEdit() {
+      document.getElementById('modal-edit').style.display = 'none';
+      currentEditIndex = null;
+    }
+
+    async function sauvegarderModificationHistorique() {
+      const nouveauMontant = document.getElementById('edit-montant-input').value;
+      if (!nouveauMontant || nouveauMontant <= 0) {
+        return showError("Veuillez saisir un montant valide.");
+      }
+
+      const btnSave = document.getElementById('btn-save-edit');
+      btnSave.disabled = true;
+      btnSave.innerHTML = '<span class="material-icons">sync</span> Mise à jour...';
+
+      try {
+        await apiPost({
+          action: 'modifierHistorique',
+          indexLigne: currentEditIndex,
+          nouveauMontant: nouveauMontant
+        });
+
+        btnSave.disabled = false;
+        btnSave.innerHTML = '<span class="material-icons">check</span> Enregistrer';
+        fermerModalEdit();
+        openHistoryScreen(); // Recharger l'historique mis à jour
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        btnSave.disabled = false;
+        btnSave.innerHTML = '<span class="material-icons">check</span> Enregistrer';
+      }
     }
   </script>
 </body>
