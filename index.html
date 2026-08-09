@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Mes Cartes Cadeaux</title>
   
   <link rel="manifest" href="./manifest.json">
@@ -28,69 +28,105 @@
     
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
-    body { background-color: var(--background); color: var(--text); padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      width: 100%;
+      overflow: hidden;
+      background-color: var(--background);
+      color: var(--text);
+    }
 
-    .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 15px; flex: 1; }
+    body {
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-    header { display: flex; justify-content: center; align-items: center; padding: 5px 0; position: relative; width: 100%; }
-    header h1 { font-size: 1.4rem; color: var(--primary); }
+    .app-container {
+      width: 100%;
+      max-width: 500px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
-    /* Ajustement flexbox pour occuper tout l'écran */
-    .screen { display: none; background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); animation: fadeIn 0.3s ease; flex: 1; flex-direction: column; }
+    header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 8px 0;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 1.3rem; color: var(--primary); }
+
+    /* Conteneur écran 100% Adaptatif */
+    .screen {
+      display: none;
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      animation: fadeIn 0.25s ease;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0; /* Essentiel pour le scroll flexbox */
+      overflow: hidden;
+    }
     .screen.active { display: flex; }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
 
-    .banner { display: none; padding: 16px; border-radius: 12px; text-align: center; font-weight: 600; margin-bottom: 15px; align-items: center; justify-content: center; gap: 10px; animation: slideDown 0.3s ease; width: 100%; }
+    .banner { display: none; padding: 12px; border-radius: 12px; text-align: center; font-weight: 600; margin-bottom: 12px; align-items: center; justify-content: center; gap: 8px; animation: slideDown 0.3s ease; width: 100%; flex-shrink: 0; }
     .success-banner { background-color: #e8f5e9; color: var(--success); }
     .error-banner { background-color: #ffebee; color: var(--danger); }
-    .banner .material-icons { font-size: 1.8rem; }
 
     .menu-grid { display: flex; flex-direction: column; gap: 15px; justify-content: center; flex: 1; }
-    .menu-btn { display: flex; align-items: center; gap: 20px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; padding: 22px; border-radius: 16px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(78, 67, 118, 0.2); }
-    .menu-btn .material-icons { font-size: 2.2rem; }
+    .menu-btn { display: flex; align-items: center; gap: 18px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; padding: 20px; border-radius: 16px; font-size: 1.05rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(78, 67, 118, 0.2); }
+    .menu-btn .material-icons { font-size: 2rem; }
 
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; color: #555; }
-    input { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; background-color: #fafafa; }
+    .screen-content { flex: 1; overflow-y: auto; padding-right: 2px; display: flex; flex-direction: column; gap: 12px; }
 
-    .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #555; }
+    input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; background-color: #fafafa; }
+
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; }
     .btn:disabled { background-color: #ccc !important; color: #888 !important; cursor: not-allowed; }
-    .btn-submit { background-color: var(--success); color: white; margin-top: 10px; }
-    .btn-back { background-color: #eee; color: #555; margin-top: 15px; }
-    .btn-camera { background-color: var(--secondary); color: white; width: auto; padding: 12px; }
-    .btn-gallery { background-color: var(--primary); color: white; width: auto; padding: 12px; }
-    .btn-toggle-code { background-color: #e0e0e0; color: #333; padding: 10px; font-size: 0.9rem; margin-top: 10px; }
+    .btn-submit { background-color: var(--success); color: white; margin-top: 8px; }
+    .btn-danger { background-color: var(--danger); color: white; margin-top: 8px; }
+    .btn-back { background-color: #eee; color: #555; margin-top: 10px; }
+    .btn-camera { background-color: var(--secondary); color: white; width: auto; padding: 10px 14px; }
+    .btn-gallery { background-color: var(--primary); color: white; width: auto; padding: 10px 14px; }
+    .btn-toggle-code { background-color: #e0e0e0; color: #333; padding: 10px; font-size: 0.85rem; margin-top: 8px; }
 
-    /* Suppression de la hauteur maximale fixe (max-height: 400px) pour occuper tout l'écran */
-    .item-list { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow-y: auto; margin: 15px 0; padding-right: 2px; }
-    .card-item { padding: 18px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-    .card-info h3 { font-size: 1.1rem; color: #222; }
-    .card-info p { font-size: 0.9rem; color: #777; }
-    .btn-select { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
+    /* Liste adaptative à défilement fluide */
+    .item-list { display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 2px; }
+    .card-item { padding: 16px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .card-info h3 { font-size: 1.05rem; color: #222; }
+    .card-info p { font-size: 0.85rem; color: #777; }
+    .btn-select { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
 
-    .qr-container { text-align: center; margin: 10px 0 5px 0; background: #f9f9f9; padding: 15px; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; cursor: pointer; transition: background 0.2s; }
-    .qr-container:hover { background: #f0f0f0; }
-    #qr-code-element { display: inline-block; background: white; padding: 10px; border-radius: 10px; border: 1px solid #eee; }
+    .qr-container { text-align: center; margin: 8px 0; background: #f9f9f9; padding: 12px; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 220px; cursor: pointer; flex-shrink: 0; }
     #qr-code-element img { margin: 0 auto; max-width: 100%; }
     #barcode-element { max-width: 100%; height: auto; display: none; }
 
-    .hist-item { padding: 15px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+    .hist-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
     .hist-details { flex: 1; }
-    .hist-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; padding-right: 10px; }
-    .hist-meta { display: flex; justify-content: space-between; color: #999; font-size: 0.8rem; padding-right: 10px; }
-    .btn-edit-hist { background: none; border: none; color: var(--primary); cursor: pointer; padding: 8px; border-radius: 8px; }
-    .btn-edit-hist:hover { background-color: #f0f4f8; }
+    .hist-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 0.95rem; margin-bottom: 3px; padding-right: 8px; }
+    .hist-meta { display: flex; justify-content: space-between; color: #999; font-size: 0.78rem; padding-right: 8px; }
+    .btn-edit-hist { background: none; border: none; color: var(--primary); cursor: pointer; padding: 6px; border-radius: 8px; }
 
     .plus { color: var(--success); }
     .moins { color: var(--danger); }
 
     .loading { text-align: center; padding: 30px; color: #888; font-style: italic; }
 
-    /* Modal d'édition */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
-    .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
+    .modal-content { background: white; padding: 20px; border-radius: 20px; width: 100%; max-width: 380px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
   </style>
 </head>
 <body>
@@ -105,10 +141,10 @@
       <span id="error-text">Message d'erreur</span>
     </div>
 
-    <!-- ÉCRAN 0 : VERROUILLAGE SÉCURITÉ (PIN) -->
+    <!-- ÉCRAN 0 : PIN -->
     <div id="screen-auth" class="screen active">
-      <h2>Accès Sécurisé</h2>
-      <p style="text-align: center; color: #666; margin: 15px 0;">Entrez le code secret familial pour déverrouiller l'application.</p>
+      <h2 style="text-align: center;">Accès Sécurisé</h2>
+      <p style="text-align: center; color: #666; margin: 15px 0; font-size:0.9rem;">Entrez le code secret familial pour déverrouiller.</p>
       <div class="form-group">
         <input type="password" inputmode="numeric" id="auth-pin" placeholder="Code secret" style="text-align:center; font-size:1.5rem; letter-spacing: 5px;">
       </div>
@@ -140,8 +176,8 @@
         <span class="material-icons">check_circle</span> Carte enregistrée !
       </div>
 
-      <div id="add-form-content">
-        <div class="form-group" style="margin-top:10px;">
+      <div class="screen-content" id="add-form-content">
+        <div class="form-group" style="margin-top:5px;">
           <label>Enseigne / Magasin</label>
           <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon...">
         </div>
@@ -158,10 +194,10 @@
           <div style="display: flex; gap: 8px;">
             <input type="text" id="add-code" placeholder="Texte du code" style="flex: 1;">
             
-            <button class="btn btn-camera" onclick="document.getElementById('qr-input-camera').click()" title="Prendre une photo">
+            <button class="btn btn-camera" onclick="document.getElementById('qr-input-camera').click()" title="Photo">
               <span class="material-icons">photo_camera</span>
             </button>
-            <button class="btn btn-gallery" onclick="document.getElementById('qr-input-gallery').click()" title="Importer un screenshot">
+            <button class="btn btn-gallery" onclick="document.getElementById('qr-input-gallery').click()" title="Screenshot">
               <span class="material-icons">image</span>
             </button>
             
@@ -170,11 +206,12 @@
           </div>
           <div id="reader" style="display:none;"></div>
         </div>
-        <button class="btn btn-submit" id="btn-save-card" onclick="saveNewCard()">
-          <span class="material-icons">save</span> Enregistrer la carte
-        </button>
-        <button class="btn btn-back" id="btn-back-card" onclick="switchScreen('screen-menu')">Retour</button>
       </div>
+      
+      <button class="btn btn-submit" id="btn-save-card" onclick="saveNewCard()">
+        <span class="material-icons">save</span> Enregistrer la carte
+      </button>
+      <button class="btn btn-back" id="btn-back-card" onclick="switchScreen('screen-menu')">Retour</button>
     </div>
 
     <!-- ÉCRAN 3 : SÉLECTION DE CARTE -->
@@ -184,7 +221,7 @@
       <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
     </div>
 
-    <!-- ÉCRAN 4 : APERÇU ET DÉBIT -->
+    <!-- ÉCRAN 4 : DÉBIT ET APERÇU -->
     <div id="screen-use-action" class="screen">
       <h2 id="action-title" style="text-align: center;">...</h2>
       
@@ -192,13 +229,13 @@
         <span class="material-icons">check_circle</span> Solde mis à jour !
       </div>
 
-      <div id="use-form-content">
-        <p style="text-align: center; margin: 10px 0; color:#666;">
-          Solde : <span id="action-solde" style="font-weight:bold; color: var(--primary); font-size: 1.2rem;">0</span>€
+      <div class="screen-content" id="use-form-content">
+        <p style="text-align: center; margin: 4px 0; color:#666;">
+          Solde : <span id="action-solde" style="font-weight:bold; color: var(--primary); font-size: 1.15rem;">0</span>€
         </p>
-        <p id="action-validite" style="text-align: center; margin-bottom: 5px; color: var(--danger); font-size: 0.9rem; display: none;"></p>
+        <p id="action-validite" style="text-align: center; margin-bottom: 4px; color: var(--danger); font-size: 0.85rem; display: none;"></p>
         
-        <p style="text-align:center; font-size:0.8rem; color:#888; margin-top:5px;">Cliquez sur le code pour le plein écran</p>
+        <p style="text-align:center; font-size:0.75rem; color:#888;">Cliquez sur le code pour le plein écran</p>
         
         <div class="qr-container" onclick="gererPleinEcranCode()">
           <div id="qr-code-element"></div>
@@ -209,18 +246,19 @@
           <span class="material-icons">barcode_reader</span> Afficher en Code-barres
         </button>
 
-        <div class="form-group" style="margin-top: 15px;">
+        <div class="form-group" style="margin-top: 10px;">
           <label>Montant utilisé (€)</label>
           <input type="text" inputmode="decimal" id="use-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
         </div>
-        <button class="btn btn-submit" id="btn-confirm-spend" onclick="confirmSpend()">
-          <span class="material-icons">done_all</span> Valider la dépense
-        </button>
-        <button class="btn btn-back" id="btn-back-spend" onclick="openUseScreen()">Retour</button>
       </div>
+
+      <button class="btn btn-submit" id="btn-confirm-spend" onclick="confirmSpend()">
+        <span class="material-icons">done_all</span> Valider la dépense
+      </button>
+      <button class="btn btn-back" id="btn-back-spend" onclick="openUseScreen()">Retour</button>
     </div>
 
-    <!-- ÉCRAN 5 : HISTORIQUE PLEIN ÉCRAN -->
+    <!-- ÉCRAN 5 : HISTORIQUE -->
     <div id="screen-history" class="screen">
       <h2>Historique</h2>
       <div id="history-container" class="item-list"></div>
@@ -229,17 +267,22 @@
 
   </div>
 
-  <!-- MODAL D'ÉDITION D'UNE LIGNE D'HISTORIQUE -->
+  <!-- MODAL D'ÉDITION / SUPPRESSION -->
   <div id="modal-edit" class="modal-overlay">
     <div class="modal-content">
-      <h3 style="margin-bottom: 15px; color: var(--primary);">Modifier le montant</h3>
-      <p id="modal-desc" style="font-size: 0.9rem; color: #666; margin-bottom: 15px;"></p>
+      <h3 style="margin-bottom: 10px; color: var(--primary);">Gérer l'enregistrement</h3>
+      <p id="modal-desc" style="font-size: 0.85rem; color: #666; margin-bottom: 12px;"></p>
+      
       <div class="form-group">
         <label>Nouveau montant (€)</label>
         <input type="text" inputmode="decimal" id="edit-montant-input" oninput="nettoyerSaisieNumerique(this)">
       </div>
+      
       <button class="btn btn-submit" id="btn-save-edit" onclick="sauvegarderModificationHistorique()">
         <span class="material-icons">check</span> Enregistrer
+      </button>
+      <button class="btn btn-danger" id="btn-delete-edit" onclick="supprimerEnregistrementHistorique()">
+        <span class="material-icons">delete</span> Supprimer cette ligne
       </button>
       <button class="btn btn-back" onclick="fermerModalEdit()">Annuler</button>
     </div>
@@ -395,9 +438,9 @@
         
         setTimeout(() => {
           successBanner.style.display = 'none';
-          document.getElementById('add-form-content').style.display = 'block';
+          document.getElementById('add-form-content').style.display = 'flex';
           switchScreen('screen-menu');
-        }, 2000);
+        }, 1500);
       } catch(err) {
         showError("Erreur : " + err.message);
         btnSave.disabled = false;
@@ -462,8 +505,8 @@
       elQr.innerHTML = ''; 
       new QRCode(elQr, {
         text: c.donneesCode,
-        width: 200,
-        height: 200,
+        width: 190,
+        height: 190,
         correctLevel : QRCode.CorrectLevel.M 
       });
 
@@ -471,9 +514,9 @@
         JsBarcode("#barcode-element", c.donneesCode, {
           format: "CODE128",
           width: 2,
-          height: 80,
+          height: 75,
           displayValue: true, 
-          fontSize: 14,
+          fontSize: 13,
           margin: 10,
           background: "#ffffff"
         });
@@ -524,7 +567,7 @@
 
         setTimeout(() => {
           successBanner.style.display = 'none';
-          document.getElementById('use-form-content').style.display = 'block';
+          document.getElementById('use-form-content').style.display = 'flex';
           openUseScreen();
         }, 1500);
       } catch(err) {
@@ -566,7 +609,7 @@
               <span>${h.date}</span>
             </div>
           </div>
-          <button class="btn-edit-hist" onclick='ouvrirModalEdit(${h.indexLigne}, "${h.nom}", ${h.montant})' title="Modifier">
+          <button class="btn-edit-hist" onclick='ouvrirModalEdit(${h.indexLigne}, "${h.nom}", ${h.montant})' title="Modifier/Supprimer">
             <span class="material-icons">edit</span>
           </button>
         `;
@@ -574,10 +617,9 @@
       });
     }
 
-    // --- LOGIQUE DE MODIFICATION DE L'HISTORIQUE ---
     function ouvrirModalEdit(indexLigne, nom, montantActuel) {
       currentEditIndex = indexLigne;
-      document.getElementById('modal-desc').innerText = `Modification pour : ${nom}`;
+      document.getElementById('modal-desc').innerText = `Opération : ${nom}`;
       document.getElementById('edit-montant-input').value = montantActuel;
       document.getElementById('modal-edit').style.display = 'flex';
     }
@@ -595,7 +637,7 @@
 
       const btnSave = document.getElementById('btn-save-edit');
       btnSave.disabled = true;
-      btnSave.innerHTML = '<span class="material-icons">sync</span> Mise à jour...';
+      btnSave.innerHTML = '<span class="material-icons">sync</span> Enregistrement...';
 
       try {
         await apiPost({
@@ -607,11 +649,37 @@
         btnSave.disabled = false;
         btnSave.innerHTML = '<span class="material-icons">check</span> Enregistrer';
         fermerModalEdit();
-        openHistoryScreen(); // Recharger l'historique mis à jour
+        openHistoryScreen();
       } catch(err) {
         showError("Erreur : " + err.message);
         btnSave.disabled = false;
         btnSave.innerHTML = '<span class="material-icons">check</span> Enregistrer';
+      }
+    }
+
+    async function supprimerEnregistrementHistorique() {
+      if (!confirm("Voulez-vous vraiment supprimer cet enregistrement ? Le solde de la carte sera automatiquement ajusté.")) {
+        return;
+      }
+
+      const btnDelete = document.getElementById('btn-delete-edit');
+      btnDelete.disabled = true;
+      btnDelete.innerHTML = '<span class="material-icons">sync</span> Suppression...';
+
+      try {
+        await apiPost({
+          action: 'supprimerHistorique',
+          indexLigne: currentEditIndex
+        });
+
+        btnDelete.disabled = false;
+        btnDelete.innerHTML = '<span class="material-icons">delete</span> Supprimer cette ligne';
+        fermerModalEdit();
+        openHistoryScreen();
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        btnDelete.disabled = false;
+        btnDelete.innerHTML = '<span class="material-icons">delete</span> Supprimer cette ligne';
       }
     }
   </script>
