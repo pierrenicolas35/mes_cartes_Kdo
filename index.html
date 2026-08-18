@@ -209,6 +209,7 @@
     .btn-submit { background-color: var(--success); color: white; margin-top: 8px; }
     .btn-danger { background-color: var(--danger); color: white; margin-top: 8px; }
     .btn-back { background-color: #eee; color: #555; margin-top: 10px; }
+    .btn-logout { background-color: #eee; color: #555; margin-top: 0; }
     .btn-camera { background-color: var(--secondary); color: white; width: auto; padding: 10px 14px; }
     .btn-gallery { background-color: var(--primary); color: white; width: auto; padding: 10px 14px; }
     .btn-toggle-code { background-color: #e0e0e0; color: #333; padding: 10px; font-size: 0.85rem; margin-top: 8px; }
@@ -245,7 +246,7 @@
   <div class="app-container">
     <header>
       <h1><span class="material-icons">card_giftcard</span> Mes Cartes</h1>
-      <button class="btn btn-back btn-icon" id="btn-google-logout" onclick="deconnecterGoogle()" title="Déconnexion Google" aria-label="Déconnexion Google" style="margin:0; display:none;">
+      <button class="btn btn-logout btn-icon" id="btn-google-logout" onclick="deconnecterGoogle()" title="Déconnexion Google" aria-label="Déconnexion Google" style="margin:0; display:none;">
         <span class="material-icons">logout</span>
       </button>
     </header>
@@ -264,7 +265,7 @@
         <button class="btn btn-back" id="btn-google-connect" onclick="demarrerConnexionGoogle()" style="margin-top:0;">
           <span class="material-icons">login</span> Connexion Google
         </button>
-        <button class="btn btn-submit" id="btn-pin-access" onclick="validerCodePin()">
+        <button class="btn btn-submit" id="btn-access" onclick="validerAccesGoogle()">
           <span class="material-icons">lock_open</span> Accéder
         </button>
       </div>
@@ -487,9 +488,6 @@
         await tenterConnexionGoogleSilencieuse();
       }
       mettreAJourEtatConnexion();
-      if (estConnecteGoogle()) {
-        validerCodePin();
-      }
     };
 
     async function initialiserGIS() {
@@ -523,7 +521,6 @@
           if (response?.access_token) {
             enregistrerSessionGoogle(response.access_token, response.expires_in);
             mettreAJourEtatConnexion();
-            validerCodePin();
             if (resolve) resolve(response || {});
           } else {
             if (reject) {
@@ -621,7 +618,7 @@
 
     function mettreAJourEtatConnexion() {
       const status = document.getElementById('google-auth-status');
-      const accessBtn = document.getElementById('btn-pin-access');
+      const accessBtn = document.getElementById('btn-access');
       const googleBtn = document.getElementById('btn-google-connect');
       const logoutBtn = document.getElementById('btn-google-logout');
       if (estConnecteGoogle()) {
@@ -637,7 +634,7 @@
       }
     }
 
-    function validerCodePin() {
+    function validerAccesGoogle() {
       if (!estConnecteGoogle()) {
         return showError("Connectez votre compte Google pour continuer.");
       }
