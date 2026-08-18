@@ -212,6 +212,8 @@
     .btn-camera { background-color: var(--secondary); color: white; width: auto; padding: 10px 14px; }
     .btn-gallery { background-color: var(--primary); color: white; width: auto; padding: 10px 14px; }
     .btn-toggle-code { background-color: #e0e0e0; color: #333; padding: 10px; font-size: 0.85rem; margin-top: 8px; }
+    .btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 50%; }
+    .btn-icon .material-icons { font-size: 1.1rem; margin: 0; }
 
     .item-list { display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 2px; }
     .card-item { padding: 16px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
@@ -243,8 +245,8 @@
   <div class="app-container">
     <header>
       <h1><span class="material-icons">card_giftcard</span> Mes Cartes</h1>
-      <button class="btn btn-back" id="btn-google-logout" onclick="deconnecterGoogle()" style="margin:0; padding:8px 10px; font-size:0.8rem; display:none;">
-        <span class="material-icons" style="font-size:1rem;">logout</span> Déconnexion
+      <button class="btn btn-back btn-icon" id="btn-google-logout" onclick="deconnecterGoogle()" title="Déconnexion Google" aria-label="Déconnexion Google" style="margin:0; display:none;">
+        <span class="material-icons">logout</span>
       </button>
     </header>
 
@@ -253,18 +255,15 @@
       <span id="error-text">Message d'erreur</span>
     </div>
 
-    <!-- ÉCRAN 0 : PIN -->
+    <!-- ÉCRAN 0 : AUTH -->
     <div id="screen-auth" class="screen active">
       <div class="internal-card">
         <h2 style="text-align: center; color: var(--primary);">Accès Sécurisé</h2>
-        <p style="text-align: center; color: #666; margin: 15px 0 10px 0; font-size:0.9rem;">Connectez Google puis entrez le code secret familial.</p>
+        <p style="text-align: center; color: #666; margin: 15px 0 10px 0; font-size:0.9rem;">Connectez votre compte Google pour accéder à l’application.</p>
         <p id="google-auth-status" style="text-align:center; color:#777; margin-bottom:10px; font-size:0.85rem;">Google non connecté</p>
         <button class="btn btn-back" id="btn-google-connect" onclick="demarrerConnexionGoogle()" style="margin-top:0;">
           <span class="material-icons">login</span> Connexion Google
         </button>
-        <div class="form-group">
-          <input type="password" inputmode="numeric" id="auth-pin" placeholder="Code secret" style="text-align:center; font-size:1.5rem; letter-spacing: 5px;">
-        </div>
         <button class="btn btn-submit" id="btn-pin-access" onclick="validerCodePin()">
           <span class="material-icons">lock_open</span> Accéder
         </button>
@@ -472,7 +471,6 @@
     let currentCard = null;
     let errorTimeout = null;
     let modeAffichageCode = 'QR'; 
-    let userPin = localStorage.getItem('app_cartes_pin') || '';
     let currentEditIndex = null;
     let accessToken = '';
     let accessTokenExpiresAt = 0;
@@ -484,15 +482,12 @@
     window.onload = async () => {
       await initialiserGIS();
       restaurerSessionGoogle();
-      if (userPin) {
-        document.getElementById('auth-pin').value = userPin;
-      }
       mettreAJourEtatConnexion();
       if (!estConnecteGoogle()) {
         await tenterConnexionGoogleSilencieuse();
       }
       mettreAJourEtatConnexion();
-      if (userPin && estConnecteGoogle()) {
+      if (estConnecteGoogle()) {
         validerCodePin();
       }
     };
@@ -528,9 +523,7 @@
           if (response?.access_token) {
             enregistrerSessionGoogle(response.access_token, response.expires_in);
             mettreAJourEtatConnexion();
-            if (userPin) {
-              validerCodePin();
-            }
+            validerCodePin();
             if (resolve) resolve(response || {});
           } else {
             if (reject) {
@@ -648,11 +641,6 @@
       if (!estConnecteGoogle()) {
         return showError("Connectez votre compte Google pour continuer.");
       }
-      const pinInput = document.getElementById('auth-pin').value.trim();
-      if (!pinInput) return showError("Veuillez saisir un code secret.");
-      
-      userPin = pinInput;
-      localStorage.setItem('app_cartes_pin', userPin);
       switchScreen('screen-menu');
       chargerDashboard();
     }
