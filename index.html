@@ -243,6 +243,9 @@
   <div class="app-container">
     <header>
       <h1><span class="material-icons">card_giftcard</span> Mes Cartes</h1>
+      <button class="btn btn-back" id="btn-google-logout" onclick="deconnecterGoogle()" style="margin:0; padding:8px 10px; font-size:0.8rem; display:none;">
+        <span class="material-icons" style="font-size:1rem;">logout</span> Déconnexion
+      </button>
     </header>
 
     <div id="global-error" class="banner error-banner">
@@ -460,6 +463,11 @@
     const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
     const CARDS_SHEET = 'Cartes';
     const HISTORY_SHEET = 'Historique';
+    const TOKEN_STORAGE_KEY = 'app_cartes_google_token';
+    const TOKEN_EXPIRY_STORAGE_KEY = 'app_cartes_google_token_expires_at';
+    const TOKEN_EXPIRY_LEEWAY_MS = 30_000;
+    const SHEETS_REQUEST_TIMEOUT_MS = 15_000;
+    const SHEETS_RETRY_COUNT = 2;
 
     let currentCard = null;
     let errorTimeout = null;
@@ -467,14 +475,26 @@
     let userPin = localStorage.getItem('app_cartes_pin') || '';
     let currentEditIndex = null;
     let accessToken = '';
+    let accessTokenExpiresAt = 0;
     let tokenClient = null;
+    let pendingAuthResolve = null;
+    let pendingAuthReject = null;
+    let pendingAuthMode = null;
 
     window.onload = async () => {
       await initialiserGIS();
+      restaurerSessionGoogle();
       if (userPin) {
         document.getElementById('auth-pin').value = userPin;
       }
       mettreAJourEtatConnexion();
+      if (!estConnecteGoogle()) {
+        await tenterConnexionGoogleSilencieuse();
+      }
+      mettreAJourEtatConnexion();
+      if (userPin && estConnecteGoogle()) {
+        validerCodePin();
+      }
     };
 
     async function initialiserGIS() {
@@ -490,40 +510,137 @@
         client_id: CLIENT_ID,
         scope: SHEETS_SCOPE,
         callback: (response) => {
+          const currentMode = pendingAuthMode;
+          const resolve = pendingAuthResolve;
+          const reject = pendingAuthReject;
+          pendingAuthResolve = null;
+          pendingAuthReject = null;
+          pendingAuthMode = null;
+
+          const errorMessage = response?.error_description || response?.error || "Connexion Google refusée.";
+          if (response?.error === 'popup_closed') {
+            if (reject) {
+              reject(new Error("Connexion Google annulée."));
+            }
+            return;
+          }
+
           if (response?.access_token) {
-            accessToken = response.access_token;
+            enregistrerSessionGoogle(response.access_token, response.expires_in);
             mettreAJourEtatConnexion();
             if (userPin) {
               validerCodePin();
             }
+            if (resolve) resolve(response || {});
           } else {
-            showError("Connexion Google refusée.");
+            if (reject) {
+              reject(new Error(errorMessage));
+            } else if (currentMode === 'manual') {
+              showError(errorMessage);
+            }
           }
         }
       });
     }
 
+    function tokenGoogleExpire() {
+      if (!accessToken) return true;
+      if (!accessTokenExpiresAt) return true;
+      return Date.now() >= (accessTokenExpiresAt - TOKEN_EXPIRY_LEEWAY_MS);
+    }
+
+    function enregistrerSessionGoogle(token, expiresInSeconds) {
+      const ttlSeconds = Number(expiresInSeconds);
+      const safeTtlSeconds = Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? ttlSeconds : 3500;
+      accessToken = token || '';
+      accessTokenExpiresAt = Date.now() + safeTtlSeconds * 1000;
+      localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+      localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, String(accessTokenExpiresAt));
+    }
+
+    function effacerSessionGoogle() {
+      accessToken = '';
+      accessTokenExpiresAt = 0;
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
+    }
+
+    function restaurerSessionGoogle() {
+      const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY) || '';
+      const storedExpiry = Number(localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY) || 0);
+      if (!storedToken || !Number.isFinite(storedExpiry)) {
+        effacerSessionGoogle();
+        return;
+      }
+      accessToken = storedToken;
+      accessTokenExpiresAt = storedExpiry;
+      if (tokenGoogleExpire()) {
+        effacerSessionGoogle();
+      }
+    }
+
+    function demanderTokenGoogle({ prompt = 'consent', mode = 'manual' } = {}) {
+      return new Promise((resolve, reject) => {
+        if (!tokenClient) {
+          reject(new Error("Google Identity Services n'est pas prêt."));
+          return;
+        }
+        pendingAuthResolve = resolve;
+        pendingAuthReject = reject;
+        pendingAuthMode = mode;
+        tokenClient.requestAccessToken({ prompt });
+      });
+    }
+
+    async function tenterConnexionGoogleSilencieuse() {
+      if (estConnecteGoogle()) return true;
+      if (!tokenClient) return false;
+      try {
+        const response = await demanderTokenGoogle({ prompt: '', mode: 'silent' });
+        return Boolean(response?.access_token);
+      } catch (_) {
+        return false;
+      }
+    }
+
     function demarrerConnexionGoogle() {
-      if (!tokenClient) return showError("Google Identity Services n'est pas prêt.");
-      tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
+      demanderTokenGoogle({ prompt: 'consent', mode: 'manual' })
+        .catch((err) => showError(err.message));
     }
 
     function estConnecteGoogle() {
-      return Boolean(accessToken);
+      if (tokenGoogleExpire()) {
+        effacerSessionGoogle();
+        return false;
+      }
+      return true;
+    }
+
+    function deconnecterGoogle() {
+      const tokenToRevoke = accessToken;
+      effacerSessionGoogle();
+      mettreAJourEtatConnexion();
+      switchScreen('screen-auth');
+      if (tokenToRevoke && window.google?.accounts?.oauth2?.revoke) {
+        google.accounts.oauth2.revoke(tokenToRevoke, () => {});
+      }
     }
 
     function mettreAJourEtatConnexion() {
       const status = document.getElementById('google-auth-status');
       const accessBtn = document.getElementById('btn-pin-access');
       const googleBtn = document.getElementById('btn-google-connect');
+      const logoutBtn = document.getElementById('btn-google-logout');
       if (estConnecteGoogle()) {
         status.innerText = "Google connecté ✅";
         accessBtn.disabled = false;
         googleBtn.innerHTML = '<span class="material-icons">check_circle</span> Reconnecter Google';
+        logoutBtn.style.display = 'inline-flex';
       } else {
         status.innerText = "Google non connecté";
         accessBtn.disabled = true;
         googleBtn.innerHTML = '<span class="material-icons">login</span> Connexion Google';
+        logoutBtn.style.display = 'none';
       }
     }
 
@@ -574,26 +691,84 @@
       return !['false', '0', 'non', 'inactive', 'inactif'].includes(v);
     }
 
+    function retryDelayMs(attempt) {
+      return 400 * (attempt + 1);
+    }
+
+    function attendre(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async function fetchSheets(url, options = {}) {
-      if (!accessToken) throw new Error("Connexion Google requise.");
-      const headers = Object.assign({}, options.headers || {}, { Authorization: 'Bearer ' + accessToken });
-      const response = await fetch(url, { ...options, headers });
-      if (response.status === 401) {
-        accessToken = '';
-        mettreAJourEtatConnexion();
-        switchScreen('screen-auth');
-        throw new Error("Session Google expirée. Veuillez vous reconnecter.");
-      }
-      if (!response.ok) {
-        let message = `Erreur Google Sheets (${response.status})`;
+      if (!estConnecteGoogle()) throw new Error("Connexion Google requise.");
+      const { timeoutMs = SHEETS_REQUEST_TIMEOUT_MS, ...fetchOptions } = options;
+      const retryableStatuses = [429, 500, 502, 503, 504];
+
+      for (let attempt = 0; attempt <= SHEETS_RETRY_COUNT; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {
-          const errorJson = await response.json();
-          if (errorJson?.error?.message) message = errorJson.error.message;
-        } catch (_) {}
-        throw new Error(message);
+          const headers = Object.assign({}, fetchOptions.headers || {}, { Authorization: 'Bearer ' + accessToken });
+          const response = await fetch(url, { ...fetchOptions, headers, signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (response.status === 401) {
+            effacerSessionGoogle();
+            mettreAJourEtatConnexion();
+            switchScreen('screen-auth');
+            throw new Error("Session Google expirée. Veuillez vous reconnecter.");
+          }
+
+          if (retryableStatuses.includes(response.status) && attempt < SHEETS_RETRY_COUNT) {
+            await attendre(retryDelayMs(attempt));
+            continue;
+          }
+
+          if (!response.ok) {
+            let detail = '';
+            const fallbackMessage = `Erreur Google Sheets (${response.status})`;
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+            try {
+              if (contentType.includes('application/json')) {
+                const errorJson = await response.json();
+                detail = errorJson?.error?.message || '';
+              } else {
+                detail = (await response.text() || '').trim();
+              }
+            } catch (_) {}
+            let message = detail || fallbackMessage;
+            if (response.status === 403) {
+              message = detail
+                ? `Accès refusé à Google Sheets (${detail})`
+                : "Accès refusé à Google Sheets. Vérifiez les autorisations OAuth et le partage du fichier.";
+            }
+            throw new Error(message);
+          }
+
+          if (response.status === 204) return {};
+          try {
+            return await response.json();
+          } catch (_) {
+            return {};
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
+          if (err?.name === 'AbortError') {
+            if (attempt < SHEETS_RETRY_COUNT) {
+              await attendre(retryDelayMs(attempt));
+              continue;
+            }
+            throw new Error("Délai dépassé lors de l'appel à Google Sheets.");
+          }
+          if (err instanceof TypeError && attempt < SHEETS_RETRY_COUNT) {
+            await attendre(retryDelayMs(attempt));
+            continue;
+          }
+          throw err instanceof Error ? err : new Error("Erreur réseau Google Sheets.");
+        }
       }
-      if (response.status === 204) return {};
-      return response.json();
+
+      throw new Error("Échec de communication avec Google Sheets.");
     }
 
     async function sheetGet(range) {
