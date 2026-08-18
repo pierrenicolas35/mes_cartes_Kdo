@@ -691,6 +691,14 @@
       return !['false', '0', 'non', 'inactive', 'inactif'].includes(v);
     }
 
+    function retryDelayMs(attempt) {
+      return 400 * (attempt + 1);
+    }
+
+    function attendre(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async function fetchSheets(url, options = {}) {
       if (!estConnecteGoogle()) throw new Error("Connexion Google requise.");
       const { timeoutMs = SHEETS_REQUEST_TIMEOUT_MS, ...fetchOptions } = options;
@@ -712,7 +720,7 @@
           }
 
           if (retryableStatuses.includes(response.status) && attempt < SHEETS_RETRY_COUNT) {
-            await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+            await attendre(retryDelayMs(attempt));
             continue;
           }
 
@@ -747,13 +755,13 @@
           clearTimeout(timeoutId);
           if (err?.name === 'AbortError') {
             if (attempt < SHEETS_RETRY_COUNT) {
-              await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+              await attendre(retryDelayMs(attempt));
               continue;
             }
             throw new Error("Délai dépassé lors de l'appel à Google Sheets.");
           }
           if (err instanceof TypeError && attempt < SHEETS_RETRY_COUNT) {
-            await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+            await attendre(retryDelayMs(attempt));
             continue;
           }
           throw err instanceof Error ? err : new Error("Erreur réseau Google Sheets.");
