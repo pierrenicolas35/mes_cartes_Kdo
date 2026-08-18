@@ -493,6 +493,9 @@
           if (response?.access_token) {
             accessToken = response.access_token;
             mettreAJourEtatConnexion();
+            if (userPin) {
+              validerCodePin();
+            }
           } else {
             showError("Connexion Google refusée.");
           }
@@ -620,6 +623,12 @@
       });
     }
 
+    async function sheetClear(range) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}:clear`;
+      return fetchSheets(url, { method: 'POST' });
+    }
+
     async function readCardsRaw() {
       const rows = await sheetGet(`${CARDS_SHEET}!A1:Z`);
       if (!rows.length) return { headers: [], items: [] };
@@ -722,6 +731,14 @@
       }
     }
 
+    function isCreditAction(action) {
+      return ['ajout', 'rechargement', 'credit'].includes(normalizeKey(action));
+    }
+
+    function isDebitAction(action) {
+      return ['depense', 'debit'].includes(normalizeKey(action));
+    }
+
     async function apiGet(action) {
       if (action === 'obtenirCartesActives') {
         return readActiveCards();
@@ -783,26 +800,30 @@
         const { items: cards } = await readCardsRaw();
         const card = cards.find(c => String(c.id) === String(target.idCarte)) || cards.find(c => c.nom === target.nom);
         if (card) {
-          const adjustment = target.action === 'Ajout' ? delta : -delta;
+          let adjustment;
+          if (isCreditAction(target.action)) adjustment = delta;
+          else if (isDebitAction(target.action)) adjustment = -delta;
+          else throw new Error(`Action d'historique inconnue : ${target.action}`);
           await updateCardSolde(card, toNumber(card.solde) + adjustment);
         }
         return 'Historique modifié';
       }
 
       if (data.action === 'supprimerHistorique') {
-        const { headers, items: historyItems } = await readHistoryRaw();
+        const { items: historyItems } = await readHistoryRaw();
         const target = historyItems.find(h => Number(h.indexLigne) === Number(data.indexLigne));
         if (!target) throw new Error("Ligne d'historique introuvable.");
 
         const { items: cards } = await readCardsRaw();
         const card = cards.find(c => String(c.id) === String(target.idCarte)) || cards.find(c => c.nom === target.nom);
         if (card) {
-          const adjustment = target.action === 'Ajout' ? -toNumber(target.montant) : toNumber(target.montant);
+          let adjustment;
+          if (isCreditAction(target.action)) adjustment = -toNumber(target.montant);
+          else if (isDebitAction(target.action)) adjustment = toNumber(target.montant);
+          else throw new Error(`Action d'historique inconnue : ${target.action}`);
           await updateCardSolde(card, toNumber(card.solde) + adjustment);
         }
-
-        const width = Math.max(headers.length, 6);
-        await sheetUpdate(`${HISTORY_SHEET}!A${target.indexLigne}:${colToA1(width - 1)}${target.indexLigne}`, [Array(width).fill('')]);
+        await sheetClear(`${HISTORY_SHEET}!A${target.indexLigne}:Z${target.indexLigne}`);
         return 'Historique supprimé';
       }
 
