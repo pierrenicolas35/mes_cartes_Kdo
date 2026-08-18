@@ -519,6 +519,9 @@
 
           const errorMessage = response?.error_description || response?.error || "Connexion Google refusée.";
           if (response?.error === 'popup_closed') {
+            if (reject) {
+              reject(new Error("Connexion Google annulée."));
+            }
             return;
           }
 
