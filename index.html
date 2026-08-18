@@ -478,6 +478,7 @@
     let accessTokenExpiresAt = 0;
     let tokenClient = null;
     let pendingAuthResolve = null;
+    let pendingAuthReject = null;
     let pendingAuthMode = null;
 
     window.onload = async () => {
@@ -510,21 +511,29 @@
         scope: SHEETS_SCOPE,
         callback: (response) => {
           const currentMode = pendingAuthMode;
-          if (pendingAuthResolve) {
-            pendingAuthResolve(response || {});
-            pendingAuthResolve = null;
-            pendingAuthMode = null;
+          const resolve = pendingAuthResolve;
+          const reject = pendingAuthReject;
+          pendingAuthResolve = null;
+          pendingAuthReject = null;
+          pendingAuthMode = null;
+
+          const errorMessage = response?.error_description || response?.error || "Connexion Google refusée.";
+          if (response?.error === 'popup_closed') {
+            return;
           }
+
           if (response?.access_token) {
             enregistrerSessionGoogle(response.access_token, response.expires_in);
             mettreAJourEtatConnexion();
             if (userPin) {
               validerCodePin();
             }
+            if (resolve) resolve(response || {});
           } else {
-            if (currentMode === 'manual') {
-              const message = response?.error_description || response?.error || "Connexion Google refusée.";
-              showError(message);
+            if (reject) {
+              reject(new Error(errorMessage));
+            } else if (currentMode === 'manual') {
+              showError(errorMessage);
             }
           }
         }
@@ -574,6 +583,7 @@
           return;
         }
         pendingAuthResolve = resolve;
+        pendingAuthReject = reject;
         pendingAuthMode = mode;
         tokenClient.requestAccessToken({ prompt });
       });
@@ -715,12 +725,11 @@
                 detail = (await response.text() || '').trim();
               }
             } catch (_) {}
-            let message = fallbackMessage;
+            let message = detail || fallbackMessage;
             if (response.status === 403) {
-              message = "Accès refusé à Google Sheets. Vérifiez les autorisations OAuth et le partage du fichier.";
-            }
-            if (detail) {
-              message += ` (${detail})`;
+              message = detail
+                ? `Accès refusé à Google Sheets (${detail})`
+                : "Accès refusé à Google Sheets. Vérifiez les autorisations OAuth et le partage du fichier.";
             }
             throw new Error(message);
           }
