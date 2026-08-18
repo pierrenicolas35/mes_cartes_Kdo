@@ -11,6 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -253,11 +254,15 @@
     <div id="screen-auth" class="screen active">
       <div class="internal-card">
         <h2 style="text-align: center; color: var(--primary);">Accès Sécurisé</h2>
-        <p style="text-align: center; color: #666; margin: 15px 0; font-size:0.9rem;">Entrez le code secret familial pour déverrouiller.</p>
+        <p style="text-align: center; color: #666; margin: 15px 0 10px 0; font-size:0.9rem;">Connectez Google puis entrez le code secret familial.</p>
+        <p id="google-auth-status" style="text-align:center; color:#777; margin-bottom:10px; font-size:0.85rem;">Google non connecté</p>
+        <button class="btn btn-back" id="btn-google-connect" onclick="demarrerConnexionGoogle()" style="margin-top:0;">
+          <span class="material-icons">login</span> Connexion Google
+        </button>
         <div class="form-group">
           <input type="password" inputmode="numeric" id="auth-pin" placeholder="Code secret" style="text-align:center; font-size:1.5rem; letter-spacing: 5px;">
         </div>
-        <button class="btn btn-submit" onclick="validerCodePin()">
+        <button class="btn btn-submit" id="btn-pin-access" onclick="validerCodePin()">
           <span class="material-icons">lock_open</span> Accéder
         </button>
       </div>
@@ -450,22 +455,82 @@
   </div>
 
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxVs-TLPxdvLlt15NIR1djFEAj_8pNub-jeZe6NI_knwJPm463f7rpneiA5hCjOHiDXRA/exec';
+    const CLIENT_ID = '363396638469-dvpf49354luh0nosffsp623msplnmcd1.apps.googleusercontent.com';
+    const SPREADSHEET_ID = '13dTh-3G0Wtxur-QhgNPIkg06HWRH3SpEfDjliLEi3j8';
+    const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+    const CARDS_SHEET = 'Cartes';
+    const HISTORY_SHEET = 'Historique';
 
     let currentCard = null;
     let errorTimeout = null;
     let modeAffichageCode = 'QR'; 
     let userPin = localStorage.getItem('app_cartes_pin') || '';
     let currentEditIndex = null;
+    let accessToken = '';
+    let tokenClient = null;
 
-    window.onload = () => {
+    window.onload = async () => {
+      await initialiserGIS();
       if (userPin) {
         document.getElementById('auth-pin').value = userPin;
-        validerCodePin();
       }
+      mettreAJourEtatConnexion();
     };
 
+    async function initialiserGIS() {
+      for (let i = 0; i < 20; i++) {
+        if (window.google?.accounts?.oauth2) break;
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+      if (!window.google?.accounts?.oauth2) {
+        showError("Impossible de charger Google Identity Services.");
+        return;
+      }
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SHEETS_SCOPE,
+        callback: (response) => {
+          if (response?.access_token) {
+            accessToken = response.access_token;
+            mettreAJourEtatConnexion();
+            if (userPin) {
+              validerCodePin();
+            }
+          } else {
+            showError("Connexion Google refusée.");
+          }
+        }
+      });
+    }
+
+    function demarrerConnexionGoogle() {
+      if (!tokenClient) return showError("Google Identity Services n'est pas prêt.");
+      tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
+    }
+
+    function estConnecteGoogle() {
+      return Boolean(accessToken);
+    }
+
+    function mettreAJourEtatConnexion() {
+      const status = document.getElementById('google-auth-status');
+      const accessBtn = document.getElementById('btn-pin-access');
+      const googleBtn = document.getElementById('btn-google-connect');
+      if (estConnecteGoogle()) {
+        status.innerText = "Google connecté ✅";
+        accessBtn.disabled = false;
+        googleBtn.innerHTML = '<span class="material-icons">check_circle</span> Reconnecter Google';
+      } else {
+        status.innerText = "Google non connecté";
+        accessBtn.disabled = true;
+        googleBtn.innerHTML = '<span class="material-icons">login</span> Connexion Google';
+      }
+    }
+
     function validerCodePin() {
+      if (!estConnecteGoogle()) {
+        return showError("Connectez votre compte Google pour continuer.");
+      }
       const pinInput = document.getElementById('auth-pin').value.trim();
       if (!pinInput) return showError("Veuillez saisir un code secret.");
       
@@ -475,23 +540,294 @@
       chargerDashboard();
     }
 
+    function normalizeKey(value = '') {
+      return value.toString().trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+    }
+
+    function findColumnIndex(headerRow, aliases) {
+      const normalizedAliases = aliases.map(normalizeKey);
+      return headerRow.findIndex(h => normalizedAliases.includes(normalizeKey(h)));
+    }
+
+    function colToA1(colIdx) {
+      let dividend = colIdx + 1;
+      let columnName = '';
+      while (dividend > 0) {
+        const modulo = (dividend - 1) % 26;
+        columnName = String.fromCharCode(65 + modulo) + columnName;
+        dividend = Math.floor((dividend - modulo) / 26);
+      }
+      return columnName;
+    }
+
+    function toNumber(value) {
+      if (value === null || value === undefined) return 0;
+      const parsed = Number(value.toString().replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function estActif(value) {
+      const v = normalizeKey(value || '');
+      if (!v) return true;
+      return !['false', '0', 'non', 'inactive', 'inactif'].includes(v);
+    }
+
+    async function fetchSheets(url, options = {}) {
+      if (!accessToken) throw new Error("Connexion Google requise.");
+      const headers = Object.assign({}, options.headers || {}, { Authorization: 'Bearer ' + accessToken });
+      const response = await fetch(url, { ...options, headers });
+      if (response.status === 401) {
+        accessToken = '';
+        mettreAJourEtatConnexion();
+        switchScreen('screen-auth');
+        throw new Error("Session Google expirée. Veuillez vous reconnecter.");
+      }
+      if (!response.ok) {
+        let message = `Erreur Google Sheets (${response.status})`;
+        try {
+          const errorJson = await response.json();
+          if (errorJson?.error?.message) message = errorJson.error.message;
+        } catch (_) {}
+        throw new Error(message);
+      }
+      if (response.status === 204) return {};
+      return response.json();
+    }
+
+    async function sheetGet(range) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}`;
+      const json = await fetchSheets(url);
+      return json.values || [];
+    }
+
+    async function sheetAppend(range, values) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}:append?valueInputOption=USER_ENTERED`;
+      return fetchSheets(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values })
+      });
+    }
+
+    async function sheetUpdate(range, values) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}?valueInputOption=USER_ENTERED`;
+      return fetchSheets(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values })
+      });
+    }
+
+    async function sheetClear(range) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}:clear`;
+      return fetchSheets(url, { method: 'POST' });
+    }
+
+    async function readCardsRaw() {
+      const rows = await sheetGet(`${CARDS_SHEET}!A1:Z`);
+      if (!rows.length) return { headers: [], items: [] };
+      const headers = rows[0];
+      const idIdx = findColumnIndex(headers, ['id', 'idcarte']);
+      const nomIdx = findColumnIndex(headers, ['nom', 'enseigne', 'magasin']);
+      const soldeIdx = findColumnIndex(headers, ['solde']);
+      const codeIdx = findColumnIndex(headers, ['donneescode', 'code', 'qrcode']);
+      const dateIdx = findColumnIndex(headers, ['datevalidite', 'expiration']);
+      const actifIdx = findColumnIndex(headers, ['actif', 'active', 'statut']);
+      const items = rows.slice(1).map((row, idx) => {
+        const rowNumber = idx + 2;
+        return {
+          id: idIdx >= 0 ? (row[idIdx] || String(rowNumber)) : String(rowNumber),
+          nom: nomIdx >= 0 ? (row[nomIdx] || '') : '',
+          solde: soldeIdx >= 0 ? toNumber(row[soldeIdx]) : 0,
+          donneesCode: codeIdx >= 0 ? (row[codeIdx] || '') : '',
+          dateValidite: dateIdx >= 0 ? (row[dateIdx] || '') : '',
+          actif: actifIdx >= 0 ? estActif(row[actifIdx]) : true,
+          _rowNumber: rowNumber,
+          _soldeCol: soldeIdx,
+          _actifCol: actifIdx
+        };
+      }).filter(item => item.nom);
+      return { headers, items };
+    }
+
+    async function readActiveCards() {
+      const { items } = await readCardsRaw();
+      return items.filter(c => c.actif !== false && toNumber(c.solde) > 0);
+    }
+
+    async function readHistoryRaw() {
+      const rows = await sheetGet(`${HISTORY_SHEET}!A1:Z`);
+      if (!rows.length) return { headers: [], items: [] };
+      const headers = rows[0];
+      const nomIdx = findColumnIndex(headers, ['nom', 'enseigne']);
+      const actionIdx = findColumnIndex(headers, ['action', 'type']);
+      const montantIdx = findColumnIndex(headers, ['montant']);
+      const userIdx = findColumnIndex(headers, ['user', 'utilisateur', 'auteur']);
+      const dateIdx = findColumnIndex(headers, ['date', 'horodatage', 'timestamp']);
+      const idCarteIdx = findColumnIndex(headers, ['idcarte', 'id']);
+      const items = rows.slice(1).map((row, idx) => {
+        const rowNumber = idx + 2;
+        const nom = nomIdx >= 0 ? (row[nomIdx] || '') : '';
+        return {
+          indexLigne: rowNumber,
+          nom,
+          action: actionIdx >= 0 ? (row[actionIdx] || 'Dépense') : 'Dépense',
+          montant: toNumber(montantIdx >= 0 ? row[montantIdx] : 0),
+          user: userIdx >= 0 ? (row[userIdx] || 'Famille') : 'Famille',
+          date: dateIdx >= 0 ? (row[dateIdx] || '') : '',
+          idCarte: idCarteIdx >= 0 ? (row[idCarteIdx] || '') : '',
+          _montantCol: montantIdx
+        };
+      }).filter(item => item.nom);
+      return { headers, items };
+    }
+
+    function buildRowFromHeaders(headers, valuesByAliases, fallbackOrder) {
+      const width = Math.max(headers.length, fallbackOrder.length);
+      const row = Array(width).fill('');
+      for (const [aliases, value] of valuesByAliases) {
+        let idx = findColumnIndex(headers, aliases);
+        if (idx < 0) {
+          const fallbackIdx = fallbackOrder.findIndex(fo => aliases.includes(fo));
+          idx = fallbackIdx >= 0 ? fallbackIdx : -1;
+        }
+        if (idx >= 0) row[idx] = value;
+      }
+      return row;
+    }
+
+    async function appendHistoryRow(card, action, montant) {
+      const now = new Date().toLocaleString('fr-FR');
+      let { headers } = await readHistoryRaw();
+      if (!headers.length) {
+        headers = ['idCarte', 'nom', 'action', 'montant', 'user', 'date'];
+        await sheetUpdate(`${HISTORY_SHEET}!A1:F1`, [headers]);
+      }
+      const fallback = ['idcarte', 'nom', 'action', 'montant', 'user', 'date'];
+      const row = buildRowFromHeaders(headers, [
+        [['idcarte', 'id'], card.id],
+        [['nom', 'enseigne'], card.nom],
+        [['action', 'type'], action],
+        [['montant'], Number(montant.toFixed(2))],
+        [['user', 'utilisateur', 'auteur'], userPin || 'Famille'],
+        [['date', 'horodatage', 'timestamp'], now]
+      ], fallback);
+      await sheetAppend(`${HISTORY_SHEET}!A:${colToA1(row.length - 1)}`, [row]);
+    }
+
+    async function updateCardSolde(card, nextSolde) {
+      if (card._soldeCol < 0) throw new Error("Colonne 'solde' introuvable.");
+      const col = colToA1(card._soldeCol);
+      await sheetUpdate(`${CARDS_SHEET}!${col}${card._rowNumber}`, [[Number(nextSolde.toFixed(2))]]);
+      if (card._actifCol >= 0) {
+        const actifCol = colToA1(card._actifCol);
+        await sheetUpdate(`${CARDS_SHEET}!${actifCol}${card._rowNumber}`, [[nextSolde > 0 ? 'TRUE' : 'FALSE']]);
+      }
+    }
+
+    function isCreditAction(action) {
+      return ['ajout', 'rechargement', 'credit'].includes(normalizeKey(action));
+    }
+
+    function isDebitAction(action) {
+      return ['depense', 'debit'].includes(normalizeKey(action));
+    }
+
     async function apiGet(action) {
-      const response = await fetch(`${API_URL}?action=${action}&pin=${encodeURIComponent(userPin)}`);
-      const json = await response.json();
-      if (json.status === 'error') throw new Error(json.message);
-      return json.data;
+      if (action === 'obtenirCartesActives') {
+        return readActiveCards();
+      }
+      if (action === 'obtenirHistorique') {
+        const { items } = await readHistoryRaw();
+        return items.slice().reverse();
+      }
+      throw new Error(`Action GET non supportée : ${action}`);
     }
 
     async function apiPost(data) {
-      data.pin = userPin;
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(data)
-      });
-      const json = await response.json();
-      if (json.status === 'error') throw new Error(json.message);
-      return json.message;
+      if (data.action === 'ajouterNouvelleCarte') {
+        let { headers, items } = await readCardsRaw();
+        if (!headers.length) {
+          headers = ['id', 'nom', 'solde', 'donneesCode', 'dateValidite', 'actif'];
+          await sheetUpdate(`${CARDS_SHEET}!A1:F1`, [headers]);
+          items = [];
+        }
+        const nextId = (items.reduce((maxId, c) => Math.max(maxId, Number(c.id) || 0), 0) + 1).toString();
+        const montant = toNumber(data.montantInitial);
+        const fallback = ['id', 'nom', 'solde', 'donneescode', 'datevalidite', 'actif'];
+        const row = buildRowFromHeaders(headers, [
+          [['id', 'idcarte'], nextId],
+          [['nom', 'enseigne', 'magasin'], data.nom],
+          [['solde'], Number(montant.toFixed(2))],
+          [['donneescode', 'code', 'qrcode'], data.donneesCode],
+          [['datevalidite', 'expiration'], data.dateValidite || ''],
+          [['actif', 'active', 'statut'], 'TRUE']
+        ], fallback);
+        await sheetAppend(`${CARDS_SHEET}!A:${colToA1(row.length - 1)}`, [row]);
+        await appendHistoryRow({ id: nextId, nom: data.nom }, 'Ajout', montant);
+        return 'Carte ajoutée';
+      }
+
+      if (data.action === 'utiliserCarte') {
+        const { items } = await readCardsRaw();
+        const card = items.find(c => String(c.id) === String(data.idCarte)) || items.find(c => String(c._rowNumber) === String(data.idCarte));
+        if (!card) throw new Error("Carte introuvable.");
+        const montant = toNumber(data.montantDepense);
+        const nextSolde = toNumber(card.solde) - montant;
+        if (nextSolde < 0) throw new Error("Le montant dépasse le solde.");
+        await updateCardSolde(card, nextSolde);
+        await appendHistoryRow(card, 'Dépense', montant);
+        return 'Carte mise à jour';
+      }
+
+      if (data.action === 'modifierHistorique') {
+        const { items: historyItems } = await readHistoryRaw();
+        const target = historyItems.find(h => Number(h.indexLigne) === Number(data.indexLigne));
+        if (!target) throw new Error("Ligne d'historique introuvable.");
+        if (target._montantCol < 0) throw new Error("Colonne 'montant' introuvable.");
+        const nouveauMontant = toNumber(data.nouveauMontant);
+        const ancienMontant = toNumber(target.montant);
+        const delta = nouveauMontant - ancienMontant;
+        const montantCol = colToA1(target._montantCol);
+        await sheetUpdate(`${HISTORY_SHEET}!${montantCol}${target.indexLigne}`, [[Number(nouveauMontant.toFixed(2))]]);
+
+        const { items: cards } = await readCardsRaw();
+        const card = cards.find(c => String(c.id) === String(target.idCarte)) || cards.find(c => c.nom === target.nom);
+        if (card) {
+          let adjustment;
+          if (isCreditAction(target.action)) adjustment = delta;
+          else if (isDebitAction(target.action)) adjustment = -delta;
+          else throw new Error(`Action d'historique inconnue : ${target.action}`);
+          await updateCardSolde(card, toNumber(card.solde) + adjustment);
+        }
+        return 'Historique modifié';
+      }
+
+      if (data.action === 'supprimerHistorique') {
+        const { items: historyItems } = await readHistoryRaw();
+        const target = historyItems.find(h => Number(h.indexLigne) === Number(data.indexLigne));
+        if (!target) throw new Error("Ligne d'historique introuvable.");
+
+        const { items: cards } = await readCardsRaw();
+        const card = cards.find(c => String(c.id) === String(target.idCarte)) || cards.find(c => c.nom === target.nom);
+        if (card) {
+          let adjustment;
+          if (isCreditAction(target.action)) adjustment = -toNumber(target.montant);
+          else if (isDebitAction(target.action)) adjustment = toNumber(target.montant);
+          else throw new Error(`Action d'historique inconnue : ${target.action}`);
+          await updateCardSolde(card, toNumber(card.solde) + adjustment);
+        }
+        await sheetClear(`${HISTORY_SHEET}!A${target.indexLigne}:Z${target.indexLigne}`);
+        return 'Historique supprimé';
+      }
+
+      throw new Error(`Action POST non supportée : ${data.action}`);
     }
 
     async function chargerDashboard() {
@@ -522,14 +858,13 @@
       if(errorTimeout) clearTimeout(errorTimeout);
       errorTimeout = setTimeout(() => { errorBanner.style.display = 'none'; }, 4000);
       
-      if (message.includes("Code PIN incorrect")) {
-        localStorage.removeItem('app_cartes_pin');
-        userPin = '';
-        switchScreen('screen-auth');
-      }
     }
 
     function switchScreen(screenId) {
+      if (screenId !== 'screen-auth' && !estConnecteGoogle()) {
+        showError("Connexion Google requise.");
+        screenId = 'screen-auth';
+      }
       document.getElementById('global-error').style.display = 'none';
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
