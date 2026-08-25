@@ -961,20 +961,21 @@
       if (data.action === 'ajouterNouvelleCarte') {
         let { headers, items } = await readCardsRaw();
         if (!headers.length) {
-          headers = ['id', 'nom', 'solde', 'donneesCode', 'dateValidite', 'actif'];
-          await sheetUpdate(`${CARDS_SHEET}!A1:F1`, [headers]);
+          headers = ['ID', 'Nom', 'Montant initial', 'Solde Restant', 'Donnees Code', 'Statut', 'Date de validité'];
+          await sheetUpdate(`${CARDS_SHEET}!A1:G1`, [headers]);
           items = [];
         }
         const nextId = (items.reduce((maxId, c) => Math.max(maxId, Number(c.id) || 0), 0) + 1).toString();
         const montant = toNumber(data.montantInitial);
-        const fallback = ['id', 'nom', 'solde', 'donneescode', 'datevalidite', 'actif'];
+        const fallback = ['id', 'nom', 'montantinitial', 'solderestant', 'donneescode', 'statut', 'datedevalidite'];
         const row = buildRowFromHeaders(headers, [
           [['id', 'idcarte'], nextId],
           [['nom', 'enseigne', 'magasin'], data.nom],
-          [['solde'], Number(montant.toFixed(2))],
-          [['donneescode', 'code', 'qrcode'], data.donneesCode],
-          [['datevalidite', 'expiration'], data.dateValidite || ''],
-          [['actif', 'active', 'statut'], 'TRUE']
+          [['montantinitial', 'montant initial'], Number(montant.toFixed(2))],
+          [['solderestant', 'solde', 'solde restant'], Number(montant.toFixed(2))],
+          [['donneescode', 'code', 'qrcode', 'donnees code'], data.donneesCode],
+          [['statut', 'actif', 'active'], 'TRUE'],
+          [['datedevalidite', 'datevalidite', 'expiration', 'date de validite'], data.dateValidite || '']
         ], fallback);
         await sheetAppend(`${CARDS_SHEET}!A:${colToA1(row.length - 1)}`, [row]);
         await appendHistoryRow({ id: nextId, nom: data.nom }, 'Ajout', montant);
