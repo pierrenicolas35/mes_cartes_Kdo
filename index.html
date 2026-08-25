@@ -460,11 +460,12 @@
   <script>
     const CLIENT_ID = '363396638469-dvpf49354luh0nosffsp623msplnmcd1.apps.googleusercontent.com';
     const SPREADSHEET_ID = '13dTh-3G0Wtxur-QhgNPIkg06HWRH3SpEfDjliLEi3j8';
-    const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+    const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile';
     const CARDS_SHEET = 'Cartes';
     const HISTORY_SHEET = 'Historique';
     const TOKEN_STORAGE_KEY = 'app_cartes_google_token';
     const TOKEN_EXPIRY_STORAGE_KEY = 'app_cartes_google_token_expires_at';
+    const USER_FIRST_NAME_KEY = 'app_cartes_google_user_first_name';
     const TOKEN_EXPIRY_LEEWAY_MS = 30_000;
     const SHEETS_REQUEST_TIMEOUT_MS = 15_000;
     const SHEETS_RETRY_COUNT = 2;
@@ -475,6 +476,7 @@
     let currentEditIndex = null;
     let accessToken = '';
     let accessTokenExpiresAt = 0;
+    let userName = '';
     let tokenClient = null;
     let pendingAuthResolve = null;
     let pendingAuthReject = null;
@@ -522,6 +524,15 @@
             enregistrerSessionGoogle(response.access_token, response.expires_in);
             mettreAJourEtatConnexion();
             if (resolve) resolve(response || {});
+            fetchGoogleUserInfo(response.access_token).then(name => {
+              if (name) {
+                userName = name;
+                localStorage.setItem(USER_FIRST_NAME_KEY, name);
+                mettreAJourEtatConnexion();
+              }
+            }).catch(err => {
+              console.error("Erreur lors de la récupération du profil utilisateur", err);
+            });
           } else {
             if (reject) {
               reject(new Error(errorMessage));
@@ -548,24 +559,53 @@
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, String(accessTokenExpiresAt));
     }
 
+    async function fetchGoogleUserInfo(token) {
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data.given_name || '';
+        }
+      } catch (err) {
+        console.error("Erreur fetch userinfo", err);
+      }
+      return '';
+    }
+
     function effacerSessionGoogle() {
       accessToken = '';
       accessTokenExpiresAt = 0;
+      userName = '';
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
+      localStorage.removeItem(USER_FIRST_NAME_KEY);
     }
 
     function restaurerSessionGoogle() {
       const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY) || '';
       const storedExpiry = Number(localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY) || 0);
+      const storedName = localStorage.getItem(USER_FIRST_NAME_KEY) || '';
       if (!storedToken || !Number.isFinite(storedExpiry)) {
         effacerSessionGoogle();
         return;
       }
       accessToken = storedToken;
       accessTokenExpiresAt = storedExpiry;
+      userName = storedName;
       if (tokenGoogleExpire()) {
         effacerSessionGoogle();
+      } else if (!userName) {
+        fetchGoogleUserInfo(accessToken).then(name => {
+          if (name) {
+            userName = name;
+            localStorage.setItem(USER_FIRST_NAME_KEY, name);
+            mettreAJourEtatConnexion();
+          }
+        }).catch(err => {
+          console.error("Erreur lors de la récupération du profil utilisateur au démarrage", err);
+        });
       }
     }
 
@@ -622,7 +662,7 @@
       const googleBtn = document.getElementById('btn-google-connect');
       const logoutBtn = document.getElementById('btn-google-logout');
       if (estConnecteGoogle()) {
-        status.innerText = "Google connecté ✅";
+        status.innerText = userName ? `Connecté en tant que ${userName} ✅` : "Google connecté ✅";
         accessBtn.disabled = false;
         googleBtn.innerHTML = '<span class="material-icons">check_circle</span> Reconnecter Google';
         logoutBtn.style.display = 'inline-flex';
@@ -875,7 +915,7 @@
         [['nom carte', 'nom', 'enseigne'], card.nom],
         [['action', 'type'], action],
         [['montant'], Number(montant.toFixed(2))],
-        [['utilisateur', 'user', 'auteur'], userPin || 'Famille']
+        [['utilisateur', 'user', 'auteur'], userName || 'Famille']
       ], fallback);
       await sheetAppend(`${HISTORY_SHEET}!A:${colToA1(row.length - 1)}`, [row]);
     }
