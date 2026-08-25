@@ -706,8 +706,14 @@
 
     function toNumber(value) {
       if (value === null || value === undefined) return 0;
-      let str = value.toString().replace(/\s/g, '').replace(',', '.');
-      str = str.replace(/[^\d.-]/g, '');
+      let str = value.toString().replace(/\s/g, '').replace(/[^\d.,-]/g, '');
+      const lastDot = str.lastIndexOf('.');
+      const lastComma = str.lastIndexOf(',');
+      if (lastComma > lastDot) {
+        str = str.replace(/\./g, '').replace(/,/g, '.');
+      } else {
+        str = str.replace(/,/g, '');
+      }
       const parsed = Number(str);
       return Number.isFinite(parsed) ? parsed : 0;
     }
