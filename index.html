@@ -522,15 +522,16 @@
 
           if (response?.access_token) {
             enregistrerSessionGoogle(response.access_token, response.expires_in);
+            mettreAJourEtatConnexion();
+            if (resolve) resolve(response || {});
             fetchGoogleUserInfo(response.access_token).then(name => {
-              userName = name;
-              localStorage.setItem(USER_FIRST_NAME_KEY, name);
-              mettreAJourEtatConnexion();
-              if (resolve) resolve(response || {});
+              if (name) {
+                userName = name;
+                localStorage.setItem(USER_FIRST_NAME_KEY, name);
+                mettreAJourEtatConnexion();
+              }
             }).catch(err => {
               console.error("Erreur lors de la récupération du profil utilisateur", err);
-              mettreAJourEtatConnexion();
-              if (resolve) resolve(response || {});
             });
           } else {
             if (reject) {
@@ -565,12 +566,12 @@
         });
         if (res.ok) {
           const data = await res.json();
-          return data.given_name || 'Famille';
+          return data.given_name || '';
         }
       } catch (err) {
         console.error("Erreur fetch userinfo", err);
       }
-      return 'Famille';
+      return '';
     }
 
     function effacerSessionGoogle() {
@@ -595,6 +596,16 @@
       userName = storedName;
       if (tokenGoogleExpire()) {
         effacerSessionGoogle();
+      } else if (!userName) {
+        fetchGoogleUserInfo(accessToken).then(name => {
+          if (name) {
+            userName = name;
+            localStorage.setItem(USER_FIRST_NAME_KEY, name);
+            mettreAJourEtatConnexion();
+          }
+        }).catch(err => {
+          console.error("Erreur lors de la récupération du profil utilisateur au démarrage", err);
+        });
       }
     }
 
