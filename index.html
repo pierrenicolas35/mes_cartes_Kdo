@@ -706,7 +706,9 @@
 
     function toNumber(value) {
       if (value === null || value === undefined) return 0;
-      const parsed = Number(value.toString().replace(',', '.'));
+      let str = value.toString().replace(/\s/g, '').replace(',', '.');
+      str = str.replace(/[^\d.-]/g, '');
+      const parsed = Number(str);
       return Number.isFinite(parsed) ? parsed : 0;
     }
 
@@ -715,7 +717,7 @@
       if (!v) return true;
       if (v === 'epuisee') return false;
       if (v === 'active') return true;
-      return !['false', '0', 'non', 'inactive', 'inactif'].includes(v);
+      return !['false', '0', 'non', 'inactive', 'inactif', 'faux'].includes(v);
     }
 
     function retryDelayMs(attempt) {
