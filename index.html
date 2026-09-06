@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -257,21 +257,44 @@
     </div>
 
     <!-- ÉCRAN 0 : AUTH -->
+
+
     <div id="screen-auth" class="screen active">
       <div class="internal-card">
         <h2 style="text-align: center; color: var(--primary);">Accès Sécurisé</h2>
-        <p style="text-align: center; color: #666; margin: 15px 0 10px 0; font-size:0.9rem;">Connectez votre compte Google pour accéder à l’application.</p>
-        <p id="google-auth-status" style="text-align:center; color:#777; margin-bottom:10px; font-size:0.85rem;">Google non connecté</p>
-        <button class="btn btn-back" id="btn-google-connect" onclick="demarrerConnexionGoogle()" style="margin-top:0;">
-          <span class="material-icons">login</span> Connexion Google
-        </button>
-        <button class="btn btn-submit" id="btn-access" onclick="validerAccesGoogle()">
+        <p style="text-align: center; color: #666; margin: 15px 0 10px 0; font-size:0.9rem;">Connectez-vous pour accéder à l’application.</p>
+        <p id="auth-status" style="text-align:center; color:#777; margin-bottom:10px; font-size:0.85rem;">Non connecté</p>
+
+        <div id="auth-methods-step" style="display:block; text-align:center;">
+            <button class="btn btn-back" onclick="signInWithPasskey()" style="margin-bottom:15px; width:100%; display:flex; justify-content:center; align-items:center;">
+              <span class="material-icons" style="margin-right:8px;">fingerprint</span> Connexion Biométrique (Passkey)
+            </button>
+            <p style="font-size:0.8rem; color:#888; margin-bottom:10px;">Ou avec email :</p>
+            <input type="email" id="auth-email" placeholder="Adresse email" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;" />
+            <button class="btn btn-back" id="btn-send-otp" onclick="sendOtp()" style="margin-top:0;">
+            <span class="material-icons">send</span> Envoyer le code
+            </button>
+        </div>
+
+        <div id="auth-otp-step" style="display:none;">
+            <p style="text-align:center; font-size:0.8rem; margin-bottom:10px;">Un code vous a été envoyé. Saisissez-le ci-dessous.</p>
+            <input type="text" id="auth-otp" placeholder="Code à 6 chiffres" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;" />
+            <button class="btn btn-submit" id="btn-verify-otp" onclick="verifyOtpCode()">
+            <span class="material-icons">check</span> Valider le code
+            </button>
+        </div>
+
+        <button class="btn btn-submit" id="btn-access" onclick="switchScreen('screen-menu')" style="display:none;">
           <span class="material-icons">lock_open</span> Accéder
+        </button>
+        <button class="btn btn-logout btn-icon" id="btn-logout" onclick="signOut()" title="Déconnexion" aria-label="Déconnexion" style="margin:0; display:none; margin-top:10px;">
+          <span class="material-icons">logout</span>
         </button>
       </div>
     </div>
 
-    <!-- ÉCRAN 1 : DASHBOARD D'ACCUEIL REDESSINÉ -->
+
+    <!-- ÉCRAN MENU -->
     <div id="screen-menu" class="screen">
       <div class="home-dashboard">
         
@@ -458,156 +481,41 @@
   </div>
 
   <script>
-    const CLIENT_ID = '363396638469-dvpf49354luh0nosffsp623msplnmcd1.apps.googleusercontent.com';
-    const SPREADSHEET_ID = '13dTh-3G0Wtxur-QhgNPIkg06HWRH3SpEfDjliLEi3j8';
-    const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile';
-    const CARDS_SHEET = 'Cartes';
-    const HISTORY_SHEET = 'Historique';
-    const TOKEN_STORAGE_KEY = 'app_cartes_google_token';
-    const TOKEN_EXPIRY_STORAGE_KEY = 'app_cartes_google_token_expires_at';
-    const USER_FIRST_NAME_KEY = 'app_cartes_google_user_first_name';
-    const TOKEN_EXPIRY_LEEWAY_MS = 30_000;
-    const SHEETS_REQUEST_TIMEOUT_MS = 15_000;
-    const SHEETS_RETRY_COUNT = 2;
 
-    let currentCard = null;
-    let errorTimeout = null;
-    let modeAffichageCode = 'QR'; 
-    let currentEditIndex = null;
-    let accessToken = '';
-    let accessTokenExpiresAt = 0;
-    let userName = '';
-    let tokenClient = null;
-    let pendingAuthResolve = null;
-    let pendingAuthReject = null;
-    let pendingAuthMode = null;
+    const supabaseUrl = 'https://jblxvrzxmhbvdvmqddxf.supabase.co';
+    const supabaseKey = 'sb_publishable_rlgOvnuIPqfU_Mt3nkoC2g_TOwBgPV4';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey, { auth: { experimental: { passkey: true } } });
+    let userName = localStorage.getItem('app_cartes_user_first_name') || '';
+    let currentUserEmail = '';
 
     window.onload = async () => {
-      await initialiserGIS();
-      restaurerSessionGoogle();
-      mettreAJourEtatConnexion();
-      if (!estConnecteGoogle()) {
-        await tenterConnexionGoogleSilencieuse();
-      }
-      mettreAJourEtatConnexion();
+      await initialiserApplication();
     };
 
-    async function initialiserGIS() {
-      for (let i = 0; i < 20; i++) {
-        if (window.google?.accounts?.oauth2) break;
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
-      if (!window.google?.accounts?.oauth2) {
-        showError("Impossible de charger Google Identity Services.");
-        return;
-      }
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SHEETS_SCOPE,
-        callback: (response) => {
-          const currentMode = pendingAuthMode;
-          const resolve = pendingAuthResolve;
-          const reject = pendingAuthReject;
-          pendingAuthResolve = null;
-          pendingAuthReject = null;
-          pendingAuthMode = null;
+    async function initialiserApplication() {
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-          const errorMessage = response?.error_description || response?.error || "Connexion Google refusée.";
-          if (response?.error === 'popup_closed') {
-            if (reject) {
-              reject(new Error("Connexion Google annulée."));
-            }
-            return;
-          }
-
-          if (response?.access_token) {
-            enregistrerSessionGoogle(response.access_token, response.expires_in);
-            mettreAJourEtatConnexion();
-            if (resolve) resolve(response || {});
-            fetchGoogleUserInfo(response.access_token).then(name => {
-              if (name) {
-                userName = name;
-                localStorage.setItem(USER_FIRST_NAME_KEY, name);
-                mettreAJourEtatConnexion();
-              }
-            }).catch(err => {
-              console.error("Erreur lors de la récupération du profil utilisateur", err);
-            });
-          } else {
-            if (reject) {
-              reject(new Error(errorMessage));
-            } else if (currentMode === 'manual') {
-              showError(errorMessage);
-            }
-          }
-        }
-      });
-    }
-
-    function tokenGoogleExpire() {
-      if (!accessToken) return true;
-      if (!accessTokenExpiresAt) return true;
-      return Date.now() >= (accessTokenExpiresAt - TOKEN_EXPIRY_LEEWAY_MS);
-    }
-
-    function enregistrerSessionGoogle(token, expiresInSeconds) {
-      const ttlSeconds = Number(expiresInSeconds);
-      const safeTtlSeconds = Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? ttlSeconds : 3500;
-      accessToken = token || '';
-      accessTokenExpiresAt = Date.now() + safeTtlSeconds * 1000;
-      localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
-      localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, String(accessTokenExpiresAt));
-    }
-
-    async function fetchGoogleUserInfo(token) {
-      try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          return data.given_name || '';
-        }
-      } catch (err) {
-        console.error("Erreur fetch userinfo", err);
-      }
-      return '';
-    }
-
-    function effacerSessionGoogle() {
-      accessToken = '';
-      accessTokenExpiresAt = 0;
-      userName = '';
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
-      localStorage.removeItem(USER_FIRST_NAME_KEY);
-    }
-
-    function restaurerSessionGoogle() {
-      const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY) || '';
-      const storedExpiry = Number(localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY) || 0);
-      const storedName = localStorage.getItem(USER_FIRST_NAME_KEY) || '';
-      if (!storedToken || !Number.isFinite(storedExpiry)) {
-        effacerSessionGoogle();
-        return;
-      }
-      accessToken = storedToken;
-      accessTokenExpiresAt = storedExpiry;
-      userName = storedName;
-      if (tokenGoogleExpire()) {
-        effacerSessionGoogle();
-      } else if (!userName) {
-        fetchGoogleUserInfo(accessToken).then(name => {
-          if (name) {
-            userName = name;
-            localStorage.setItem(USER_FIRST_NAME_KEY, name);
-            mettreAJourEtatConnexion();
-          }
-        }).catch(err => {
-          console.error("Erreur lors de la récupération du profil utilisateur au démarrage", err);
-        });
+      if (session) {
+        // Find user name if possible, maybe from metadata or we just display email
+        userName = session.user.user_metadata?.first_name || session.user.email.split('@')[0];
+        currentUserEmail = session.user.email;
+        mettreAJourEtatConnexion();
+        switchScreen('screen-menu');
+      } else {
+        mettreAJourEtatConnexion();
+        switchScreen('screen-auth');
       }
     }
+
+
+          mettreAJourEtatConnexion();
+    };
+
+
+
+
+
+
 
     function demanderTokenGoogle({ prompt = 'consent', mode = 'manual' } = {}) {
       return new Promise((resolve, reject) => {
@@ -622,65 +530,17 @@
       });
     }
 
-    async function tenterConnexionGoogleSilencieuse() {
-      if (estConnecteGoogle()) return true;
-      if (!tokenClient) return false;
-      try {
-        const response = await demanderTokenGoogle({ prompt: '', mode: 'silent' });
-        return Boolean(response?.access_token);
-      } catch (_) {
-        return false;
-      }
-    }
 
-    function demarrerConnexionGoogle() {
-      demanderTokenGoogle({ prompt: 'consent', mode: 'manual' })
-        .catch((err) => showError(err.message));
-    }
 
-    function estConnecteGoogle() {
-      if (tokenGoogleExpire()) {
-        effacerSessionGoogle();
-        return false;
-      }
-      return true;
-    }
 
-    function deconnecterGoogle() {
-      const tokenToRevoke = accessToken;
-      effacerSessionGoogle();
-      mettreAJourEtatConnexion();
-      switchScreen('screen-auth');
-      if (tokenToRevoke && window.google?.accounts?.oauth2?.revoke) {
-        google.accounts.oauth2.revoke(tokenToRevoke, () => {});
-      }
-    }
 
-    function mettreAJourEtatConnexion() {
-      const status = document.getElementById('google-auth-status');
-      const accessBtn = document.getElementById('btn-access');
-      const googleBtn = document.getElementById('btn-google-connect');
-      const logoutBtn = document.getElementById('btn-google-logout');
-      if (estConnecteGoogle()) {
-        status.innerText = userName ? `Connecté en tant que ${userName} ✅` : "Google connecté ✅";
-        accessBtn.disabled = false;
-        googleBtn.innerHTML = '<span class="material-icons">check_circle</span> Reconnecter Google';
-        logoutBtn.style.display = 'inline-flex';
-      } else {
-        status.innerText = "Google non connecté";
-        accessBtn.disabled = true;
-        googleBtn.innerHTML = '<span class="material-icons">login</span> Connexion Google';
-        logoutBtn.style.display = 'none';
-      }
-    }
 
-    function validerAccesGoogle() {
-      if (!estConnecteGoogle()) {
-        return showError("Connectez votre compte Google pour continuer.");
-      }
-      switchScreen('screen-menu');
-      chargerDashboard();
-    }
+
+
+
+
+
+
 
     function normalizeKey(value = '') {
       return value.toString().trim().toLowerCase()
@@ -688,20 +548,8 @@
         .replace(/[^a-z0-9]/g, '');
     }
 
-    function findColumnIndex(headerRow, aliases) {
-      const normalizedAliases = aliases.map(normalizeKey);
-      return headerRow.findIndex(h => normalizedAliases.includes(normalizeKey(h)));
-    }
 
-    function colToA1(colIdx) {
-      let dividend = colIdx + 1;
-      let columnName = '';
-      while (dividend > 0) {
-        const modulo = (dividend - 1) % 26;
-        columnName = String.fromCharCode(65 + modulo) + columnName;
-        dividend = Math.floor((dividend - modulo) / 26);
-      }
-      return columnName;
+          return columnName;
     }
 
     function toNumber(value) {
@@ -734,25 +582,6 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async function fetchSheets(url, options = {}) {
-      if (!estConnecteGoogle()) throw new Error("Connexion Google requise.");
-      const { timeoutMs = SHEETS_REQUEST_TIMEOUT_MS, ...fetchOptions } = options;
-      const retryableStatuses = [429, 500, 502, 503, 504];
-
-      for (let attempt = 0; attempt <= SHEETS_RETRY_COUNT; attempt++) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          const headers = Object.assign({}, fetchOptions.headers || {}, { Authorization: 'Bearer ' + accessToken });
-          const response = await fetch(url, { ...fetchOptions, headers, signal: controller.signal });
-          clearTimeout(timeoutId);
-
-          if (response.status === 401) {
-            effacerSessionGoogle();
-            mettreAJourEtatConnexion();
-            switchScreen('screen-auth');
-            throw new Error("Session Google expirée. Veuillez vous reconnecter.");
-          }
 
           if (retryableStatuses.includes(response.status) && attempt < SHEETS_RETRY_COUNT) {
             await attendre(retryDelayMs(attempt));
@@ -806,106 +635,37 @@
       throw new Error("Échec de communication avec Google Sheets.");
     }
 
-    async function sheetGet(range) {
-      const encodedRange = encodeURIComponent(range);
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}`;
-      const json = await fetchSheets(url);
-      return json.values || [];
-    }
 
-    async function sheetAppend(range, values) {
-      const encodedRange = encodeURIComponent(range);
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}:append?valueInputOption=USER_ENTERED`;
-      return fetchSheets(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values })
-      });
-    }
 
-    async function sheetUpdate(range, values) {
-      const encodedRange = encodeURIComponent(range);
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}?valueInputOption=USER_ENTERED`;
-      return fetchSheets(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values })
-      });
-    }
 
-    async function sheetClear(range) {
-      const encodedRange = encodeURIComponent(range);
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}:clear`;
-      return fetchSheets(url, { method: 'POST' });
-    }
+
 
     async function readCardsRaw() {
-      const rows = await sheetGet(`${CARDS_SHEET}!A1:Z`);
-      if (!rows.length) return { headers: [], items: [] };
-      const headers = rows[0];
-      const idIdx = findColumnIndex(headers, ['id', 'idcarte']);
-      const nomIdx = findColumnIndex(headers, ['nom', 'enseigne', 'magasin']);
-      const soldeIdx = findColumnIndex(headers, ['solde', 'solde restant']);
-      const codeIdx = findColumnIndex(headers, ['donneescode', 'donnees code', 'code', 'qrcode']);
-      const dateIdx = findColumnIndex(headers, ['datevalidite', 'date de validite', 'expiration']);
-      const actifIdx = findColumnIndex(headers, ['actif', 'active', 'statut']);
-      const items = rows.slice(1).map((row, idx) => {
-        const rowNumber = idx + 2;
-        return {
-          id: idIdx >= 0 ? (row[idIdx] || String(rowNumber)) : String(rowNumber),
-          nom: nomIdx >= 0 ? (row[nomIdx] || '') : '',
-          solde: soldeIdx >= 0 ? toNumber(row[soldeIdx]) : 0,
-          donneesCode: codeIdx >= 0 ? (row[codeIdx] || '') : '',
-          dateValidite: dateIdx >= 0 ? (row[dateIdx] || '') : '',
-          actif: actifIdx >= 0 ? estActif(row[actifIdx]) : true,
-          _rowNumber: rowNumber,
-          _soldeCol: soldeIdx,
-          _actifCol: actifIdx
-        };
-      }).filter(item => item.nom);
-      return { headers, items };
+      const { data, error } = await supabase.from('cartes').select('*');
+      if (error) throw error;
+      const items = data.map(c => ({
+        id: c.id,
+        nom: c.nom,
+        solde: c.solde_restant,
+        donneesCode: c.donnees_code,
+        dateValidite: c.date_validite,
+        actif: c.statut,
+        montantInitial: c.montant_initial
+      }));
+      return { items };
     }
+
+
+
 
     async function readActiveCards() {
       const { items } = await readCardsRaw();
       return items.filter(c => c.actif !== false && toNumber(c.solde) > 0);
     }
 
-    async function readHistoryRaw() {
-      const rows = await sheetGet(`${HISTORY_SHEET}!A1:Z`);
-      if (!rows.length) return { headers: [], items: [] };
-      const headers = rows[0];
-      const nomIdx = findColumnIndex(headers, ['nom', 'nom carte', 'enseigne']);
-      const actionIdx = findColumnIndex(headers, ['action', 'type']);
-      const montantIdx = findColumnIndex(headers, ['montant']);
-      const userIdx = findColumnIndex(headers, ['user', 'utilisateur', 'auteur']);
-      const dateIdx = findColumnIndex(headers, ['date', 'horodatage', 'timestamp']);
-      const items = rows.slice(1).map((row, idx) => {
-        const rowNumber = idx + 2;
-        const nom = nomIdx >= 0 ? (row[nomIdx] || '') : '';
-        return {
-          indexLigne: rowNumber,
-          nom,
-          action: actionIdx >= 0 ? (row[actionIdx] || 'Dépense') : 'Dépense',
-          montant: toNumber(montantIdx >= 0 ? row[montantIdx] : 0),
-          user: userIdx >= 0 ? (row[userIdx] || 'Famille') : 'Famille',
-          date: dateIdx >= 0 ? (row[dateIdx] || '') : '',
-          _montantCol: montantIdx
-        };
-      }).filter(item => item.nom);
-      return { headers, items };
-    }
 
-    function buildRowFromHeaders(headers, valuesByAliases, fallbackOrder) {
-      const width = Math.max(headers.length, fallbackOrder.length);
-      const row = Array(width).fill('');
-      for (const [aliases, value] of valuesByAliases) {
-        let idx = findColumnIndex(headers, aliases);
-        if (idx < 0) {
-          const fallbackIdx = fallbackOrder.findIndex(fo => aliases.includes(fo));
-          idx = fallbackIdx >= 0 ? fallbackIdx : -1;
-        }
-        if (idx >= 0) row[idx] = value;
+
+            if (idx >= 0) row[idx] = value;
       }
       return row;
     }
@@ -957,34 +717,55 @@
       throw new Error(`Action GET non supportée : ${action}`);
     }
 
+
+    async function appendHistoryRow(card, action, montant) {
+      const now = new Date().toISOString();
+      const newHistory = {
+        nom_carte: card.nom,
+        action: action,
+        montant: Number(montant.toFixed(2)),
+        utilisateur: userName || 'Famille',
+        date: now
+      };
+      const { error } = await supabase.from('historique').insert([newHistory]);
+      if (error) throw error;
+    }
+
+    async function updateCardSolde(card, nextSolde) {
+      const { error } = await supabase.from('cartes').update({
+        solde_restant: Number(nextSolde.toFixed(2)),
+        statut: nextSolde > 0
+      }).eq('id', card.id);
+      if (error) throw error;
+    }
+
     async function apiPost(data) {
       if (data.action === 'ajouterNouvelleCarte') {
-        let { headers, items } = await readCardsRaw();
-        if (!headers.length) {
-          headers = ['ID', 'Nom', 'Montant initial', 'Solde Restant', 'Donnees Code', 'Statut', 'Date de validité'];
-          await sheetUpdate(`${CARDS_SHEET}!A1:G1`, [headers]);
-          items = [];
-        }
-        const nextId = (items.reduce((maxId, c) => Math.max(maxId, Number(c.id) || 0), 0) + 1).toString();
         const montant = toNumber(data.montantInitial);
-        const fallback = ['id', 'nom', 'montantinitial', 'solderestant', 'donneescode', 'statut', 'datedevalidite'];
-        const row = buildRowFromHeaders(headers, [
-          [['id', 'idcarte'], nextId],
-          [['nom', 'enseigne', 'magasin'], data.nom],
-          [['montantinitial', 'montant initial'], Number(montant.toFixed(2))],
-          [['solderestant', 'solde', 'solde restant'], Number(montant.toFixed(2))],
-          [['donneescode', 'code', 'qrcode', 'donnees code'], data.donneesCode],
-          [['statut', 'actif', 'active'], 'TRUE'],
-          [['datedevalidite', 'datevalidite', 'expiration', 'date de validite'], data.dateValidite || '']
-        ], fallback);
-        await sheetAppend(`${CARDS_SHEET}!A:${colToA1(row.length - 1)}`, [row]);
+        const codeValue = (data.donneesCode && data.donneesCode.trim().length > 0) ? data.donneesCode.trim() : `AUTO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+
+        // Generate an ID for the card since it might be required or default. Let the DB handle ID if auto-increment, but wait, schema says 'id' is character varying. Let's use UUID or timestamp
+        const nextId = 'carte_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+
+        const newCard = {
+          id: nextId,
+          nom: data.nom,
+          montant_initial: Number(montant.toFixed(2)),
+          solde_restant: Number(montant.toFixed(2)),
+          donnees_code: codeValue,
+          statut: true,
+          date_validite: data.dateValidite || null
+        };
+        const { data: insertedCard, error } = await supabase.from('cartes').insert([newCard]).select().single();
+        if (error) throw error;
+
         await appendHistoryRow({ id: nextId, nom: data.nom }, 'Ajout', montant);
         return 'Carte ajoutée';
       }
 
       if (data.action === 'utiliserCarte') {
         const { items } = await readCardsRaw();
-        const card = items.find(c => String(c.id) === String(data.idCarte)) || items.find(c => String(c._rowNumber) === String(data.idCarte));
+        const card = items.find(c => String(c.id) === String(data.idCarte));
         if (!card) throw new Error("Carte introuvable.");
         const montant = toNumber(data.montantDepense);
         const nextSolde = toNumber(card.solde) - montant;
@@ -995,18 +776,19 @@
       }
 
       if (data.action === 'modifierHistorique') {
-        const { items: historyItems } = await readHistoryRaw();
-        const target = historyItems.find(h => Number(h.indexLigne) === Number(data.indexLigne));
-        if (!target) throw new Error("Ligne d'historique introuvable.");
-        if (target._montantCol < 0) throw new Error("Colonne 'montant' introuvable.");
+        const targetId = Number(data.indexLigne);
+        const { data: target, error: targetError } = await supabase.from('historique').select('*').eq('id', targetId).single();
+        if (targetError || !target) throw new Error("Ligne d'historique introuvable.");
+
         const nouveauMontant = toNumber(data.nouveauMontant);
         const ancienMontant = toNumber(target.montant);
         const delta = nouveauMontant - ancienMontant;
-        const montantCol = colToA1(target._montantCol);
-        await sheetUpdate(`${HISTORY_SHEET}!${montantCol}${target.indexLigne}`, [[Number(nouveauMontant.toFixed(2))]]);
+
+        const { error: updateError } = await supabase.from('historique').update({ montant: Number(nouveauMontant.toFixed(2)) }).eq('id', targetId);
+        if (updateError) throw updateError;
 
         const { items: cards } = await readCardsRaw();
-        const card = cards.find(c => c.nom === target.nom);
+        const card = cards.find(c => c.nom === target.nom_carte);
         if (card) {
           let adjustment;
           if (isCreditAction(target.action)) adjustment = delta;
@@ -1018,12 +800,12 @@
       }
 
       if (data.action === 'supprimerHistorique') {
-        const { items: historyItems } = await readHistoryRaw();
-        const target = historyItems.find(h => Number(h.indexLigne) === Number(data.indexLigne));
-        if (!target) throw new Error("Ligne d'historique introuvable.");
+        const targetId = Number(data.indexLigne);
+        const { data: target, error: targetError } = await supabase.from('historique').select('*').eq('id', targetId).single();
+        if (targetError || !target) throw new Error("Ligne d'historique introuvable.");
 
         const { items: cards } = await readCardsRaw();
-        const card = cards.find(c => c.nom === target.nom);
+        const card = cards.find(c => c.nom === target.nom_carte);
         if (card) {
           let adjustment;
           if (isCreditAction(target.action)) adjustment = -toNumber(target.montant);
@@ -1031,12 +813,15 @@
           else throw new Error(`Action d'historique inconnue : ${target.action}`);
           await updateCardSolde(card, toNumber(card.solde) + adjustment);
         }
-        await sheetClear(`${HISTORY_SHEET}!A${target.indexLigne}:Z${target.indexLigne}`);
+
+        const { error: deleteError } = await supabase.from('historique').delete().eq('id', targetId);
+        if (deleteError) throw deleteError;
         return 'Historique supprimé';
       }
 
       throw new Error(`Action POST non supportée : ${data.action}`);
     }
+
 
     async function chargerDashboard() {
       try {
@@ -1059,6 +844,135 @@
       champ.value = valeur;
     }
 
+
+
+    async function signInWithPasskey() {
+      try {
+        const { data, error } = await supabase.auth.signInWithPasskey();
+        if (error) {
+           if(error.message.includes("passkey_disabled")) {
+               return showError("La connexion par Passkey n'est pas activée sur le serveur. Utilisez l'email.");
+           }
+           throw error;
+        }
+
+        userName = data.user?.user_metadata?.first_name || data.user?.email?.split('@')[0];
+        currentUserEmail = data.user?.email;
+        localStorage.setItem('app_cartes_user_first_name', userName);
+        mettreAJourEtatConnexion();
+        switchScreen('screen-menu');
+      } catch(err) {
+        showError("Erreur biométrique : " + err.message);
+      }
+    }
+
+    async function sendOtp() {
+      const email = document.getElementById('auth-email').value;
+      if (!email) return showError("Veuillez entrer une adresse email.");
+
+      const btn = document.getElementById('btn-send-otp');
+      btn.disabled = true;
+      btn.innerHTML = 'Envoi...';
+
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: true
+        }
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-icons">send</span> Envoyer le code';
+
+      if (error) {
+        return showError("Erreur d'envoi : " + error.message);
+      }
+
+      currentUserEmail = email;
+      document.getElementById('auth-methods-step').style.display = 'none';
+      document.getElementById('auth-otp-step').style.display = 'block';
+    }
+
+    async function verifyOtpCode() {
+      const token = document.getElementById('auth-otp').value;
+      if (!token || token.length !== 6) return showError("Veuillez entrer le code à 6 chiffres.");
+
+      const btn = document.getElementById('btn-verify-otp');
+      btn.disabled = true;
+      btn.innerHTML = 'Validation...';
+
+      const { data: { session }, error } = await supabase.auth.verifyOtp({
+        email: currentUserEmail,
+        token: token,
+        type: 'email'
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-icons">check</span> Valider le code';
+
+      if (error) {
+        return showError("Erreur de validation : " + error.message);
+      }
+
+      userName = session.user.user_metadata?.first_name || session.user.email.split('@')[0];
+      localStorage.setItem('app_cartes_user_first_name', userName);
+      mettreAJourEtatConnexion();
+      switchScreen('screen-menu');
+    }
+
+    async function signOut() {
+      await supabase.auth.signOut();
+      userName = '';
+      currentUserEmail = '';
+      localStorage.removeItem('app_cartes_user_first_name');
+
+      document.getElementById('auth-email').value = '';
+      document.getElementById('auth-otp').value = '';
+      document.getElementById('auth-methods-step').style.display = 'block';
+      document.getElementById('auth-otp-step').style.display = 'none';
+
+      mettreAJourEtatConnexion();
+      switchScreen('screen-auth');
+    }
+
+    function mettreAJourEtatConnexion() {
+      const status = document.getElementById('auth-status');
+      const accessBtn = document.getElementById('btn-access');
+      const logoutBtn = document.getElementById('btn-logout');
+      const methodsStep = document.getElementById('auth-methods-step');
+      const otpStep = document.getElementById('auth-otp-step');
+
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          status.innerText = userName ? `Connecté en tant que ${userName} ✅` : "Connecté ✅";
+          accessBtn.style.display = 'inline-block';
+          logoutBtn.style.display = 'inline-block';
+          methodsStep.style.display = 'none';
+          otpStep.style.display = 'none';
+        } else {
+          status.innerText = "Non connecté";
+          accessBtn.style.display = 'none';
+          logoutBtn.style.display = 'none';
+          methodsStep.style.display = 'block';
+          otpStep.style.display = 'none';
+        }
+      });
+    }
+
+    function switchScreen(screenId) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (screenId !== 'screen-auth' && !session) {
+          showError("Connexion requise.");
+          screenId = 'screen-auth';
+        }
+        document.getElementById('global-error').style.display = 'none';
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        if (screenId === 'screen-menu') chargerDashboard();
+      });
+    }
+
+
     function showError(message) {
       const errorBanner = document.getElementById('global-error');
       document.getElementById('error-text').innerText = message;
@@ -1068,16 +982,8 @@
       
     }
 
-    function switchScreen(screenId) {
-      if (screenId !== 'screen-auth' && !estConnecteGoogle()) {
-        showError("Connexion Google requise.");
-        screenId = 'screen-auth';
-      }
-      document.getElementById('global-error').style.display = 'none';
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      document.getElementById(screenId).classList.add('active');
-      if (screenId === 'screen-menu') chargerDashboard();
-    }
+
+
 
     function gererPleinEcranCode() {
       const codeContainer = document.querySelector('.qr-container');
