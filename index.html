@@ -485,18 +485,19 @@
 
   <script>
 
-    const supabaseUrl = 'https://jblxvrzxmhbvdvmqddxf.supabase.co';
+  const supabaseUrl = 'https://jblxvrzxmhbvdvmqddxf.supabase.co';
     const supabaseKey = 'sb_publishable_rlgOvnuIPqfU_Mt3nkoC2g_TOwBgPV4';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, { auth: { experimental: { passkey: true } } });
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, { auth: { experimental: { passkey: true } } });
     let userName = localStorage.getItem('app_cartes_user_first_name') || '';
     let currentUserEmail = '';
+    let errorTimeout = null;
 
     window.onload = async () => {
       await initialiserApplication();
     };
 
     async function initialiserApplication() {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
 
       if (session) {
         // Find user name if possible, maybe from metadata or we just display email
@@ -510,49 +511,19 @@
       }
     }
 
-
-          mettreAJourEtatConnexion();
-    };
-
-
-
-
-
-
-
-    function demanderTokenGoogle({ prompt = 'consent', mode = 'manual' } = {}) {
-      return new Promise((resolve, reject) => {
-        if (!tokenClient) {
-          reject(new Error("Google Identity Services n'est pas prêt."));
-          return;
-        }
-        pendingAuthResolve = resolve;
-        pendingAuthReject = reject;
-        pendingAuthMode = mode;
-        tokenClient.requestAccessToken({ prompt });
-      });
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-    function normalizeKey(value = '') {
-      return value.toString().trim().toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '');
-    }
-
-
-          return columnName;
+    async function readCardsRaw() {
+      const { data, error } = await supabaseClient.from('cartes').select('*');
+      if (error) throw error;
+      const items = data.map(c => ({
+        id: c.id,
+        nom: c.nom,
+        solde: c.solde_restant,
+        donneesCode: c.donnees_code,
+        dateValidite: c.date_validite,
+        actif: c.statut,
+        montantInitial: c.montant_initial
+      }));
+      return { items };
     }
 
     function toNumber(value) {
@@ -569,6 +540,12 @@
       return Number.isFinite(parsed) ? parsed : 0;
     }
 
+    function normalizeKey(value = '') {
+      return value.toString().trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+    }
+
     function estActif(value) {
       const v = normalizeKey(value || '');
       if (!v) return true;
@@ -577,128 +554,30 @@
       return !['false', '0', 'non', 'inactive', 'inactif', 'faux'].includes(v);
     }
 
-    function retryDelayMs(attempt) {
-      return 400 * (attempt + 1);
-    }
-
-    function attendre(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-
-          if (retryableStatuses.includes(response.status) && attempt < SHEETS_RETRY_COUNT) {
-            await attendre(retryDelayMs(attempt));
-            continue;
-          }
-
-          if (!response.ok) {
-            let detail = '';
-            const fallbackMessage = `Erreur Google Sheets (${response.status})`;
-            const contentType = (response.headers.get('content-type') || '').toLowerCase();
-            try {
-              if (contentType.includes('application/json')) {
-                const errorJson = await response.json();
-                detail = errorJson?.error?.message || '';
-              } else {
-                detail = (await response.text() || '').trim();
-              }
-            } catch (_) {}
-            let message = detail || fallbackMessage;
-            if (response.status === 403) {
-              message = detail
-                ? `Accès refusé à Google Sheets (${detail})`
-                : "Accès refusé à Google Sheets. Vérifiez les autorisations OAuth et le partage du fichier.";
-            }
-            throw new Error(message);
-          }
-
-          if (response.status === 204) return {};
-          try {
-            return await response.json();
-          } catch (_) {
-            return {};
-          }
-        } catch (err) {
-          clearTimeout(timeoutId);
-          if (err?.name === 'AbortError') {
-            if (attempt < SHEETS_RETRY_COUNT) {
-              await attendre(retryDelayMs(attempt));
-              continue;
-            }
-            throw new Error("Délai dépassé lors de l'appel à Google Sheets.");
-          }
-          if (err instanceof TypeError && attempt < SHEETS_RETRY_COUNT) {
-            await attendre(retryDelayMs(attempt));
-            continue;
-          }
-          throw err instanceof Error ? err : new Error("Erreur réseau Google Sheets.");
-        }
-      }
-
-      throw new Error("Échec de communication avec Google Sheets.");
-    }
-
-
-
-
-
-
-    async function readCardsRaw() {
-      const { data, error } = await supabase.from('cartes').select('*');
-      if (error) throw error;
-      const items = data.map(c => ({
-        id: c.id,
-        nom: c.nom,
-        solde: c.solde_restant,
-        donneesCode: c.donnees_code,
-        dateValidite: c.date_validite,
-        actif: c.statut,
-        montantInitial: c.montant_initial
-      }));
-      return { items };
-    }
-
-
-
-
     async function readActiveCards() {
       const { items } = await readCardsRaw();
       return items.filter(c => c.actif !== false && toNumber(c.solde) > 0);
     }
 
-
-
-            if (idx >= 0) row[idx] = value;
-      }
-      return row;
-    }
-
     async function appendHistoryRow(card, action, montant) {
-      const now = new Date().toLocaleString('fr-FR');
-      let { headers } = await readHistoryRaw();
-      if (!headers.length) {
-        headers = ['Date', 'Nom Carte', 'Action', 'Montant', 'Utilisateur'];
-        await sheetUpdate(`${HISTORY_SHEET}!A1:E1`, [headers]);
-      }
-      const fallback = ['date', 'nom carte', 'action', 'montant', 'utilisateur'];
-      const row = buildRowFromHeaders(headers, [
-        [['date', 'horodatage', 'timestamp'], now],
-        [['nom carte', 'nom', 'enseigne'], card.nom],
-        [['action', 'type'], action],
-        [['montant'], Number(montant.toFixed(2))],
-        [['utilisateur', 'user', 'auteur'], userName || 'Famille']
-      ], fallback);
-      await sheetAppend(`${HISTORY_SHEET}!A:${colToA1(row.length - 1)}`, [row]);
+      const now = new Date().toISOString();
+      const newHistory = {
+        nom_carte: card.nom,
+        action: action,
+        montant: Number(montant.toFixed(2)),
+        utilisateur: userName || 'Famille',
+        date: now
+      };
+      const { error } = await supabaseClient.from('historique').insert([newHistory]);
+      if (error) throw error;
     }
 
     async function updateCardSolde(card, nextSolde) {
-      if (card._soldeCol < 0) throw new Error("Colonne 'solde' introuvable.");
-      const col = colToA1(card._soldeCol);
-      await sheetUpdate(`${CARDS_SHEET}!${col}${card._rowNumber}`, [[Number(nextSolde.toFixed(2))]]);
-      if (card._actifCol >= 0) {
-        const actifCol = colToA1(card._actifCol);
-        await sheetUpdate(`${CARDS_SHEET}!${actifCol}${card._rowNumber}`, [[nextSolde > 0 ? 'TRUE' : 'FALSE']]);
-      }
+      const { error } = await supabaseClient.from('cartes').update({
+        solde_restant: Number(nextSolde.toFixed(2)),
+        statut: nextSolde > 0
+      }).eq('id', card.id);
+      if (error) throw error;
     }
 
     function isCreditAction(action) {
@@ -714,32 +593,11 @@
         return readActiveCards();
       }
       if (action === 'obtenirHistorique') {
-        const { items } = await readHistoryRaw();
-        return items.slice().reverse();
+        const { data, error } = await supabaseClient.from('historique').select('*').order('date', { ascending: false });
+        if (error) throw error;
+        return data;
       }
       throw new Error(`Action GET non supportée : ${action}`);
-    }
-
-
-    async function appendHistoryRow(card, action, montant) {
-      const now = new Date().toISOString();
-      const newHistory = {
-        nom_carte: card.nom,
-        action: action,
-        montant: Number(montant.toFixed(2)),
-        utilisateur: userName || 'Famille',
-        date: now
-      };
-      const { error } = await supabase.from('historique').insert([newHistory]);
-      if (error) throw error;
-    }
-
-    async function updateCardSolde(card, nextSolde) {
-      const { error } = await supabase.from('cartes').update({
-        solde_restant: Number(nextSolde.toFixed(2)),
-        statut: nextSolde > 0
-      }).eq('id', card.id);
-      if (error) throw error;
     }
 
     async function apiPost(data) {
@@ -747,7 +605,6 @@
         const montant = toNumber(data.montantInitial);
         const codeValue = (data.donneesCode && data.donneesCode.trim().length > 0) ? data.donneesCode.trim() : `AUTO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
-        // Generate an ID for the card since it might be required or default. Let the DB handle ID if auto-increment, but wait, schema says 'id' is character varying. Let's use UUID or timestamp
         const nextId = 'carte_' + Date.now() + '_' + Math.floor(Math.random()*1000);
 
         const newCard = {
@@ -759,7 +616,7 @@
           statut: true,
           date_validite: data.dateValidite || null
         };
-        const { data: insertedCard, error } = await supabase.from('cartes').insert([newCard]).select().single();
+        const { data: insertedCard, error } = await supabaseClient.from('cartes').insert([newCard]).select().single();
         if (error) throw error;
 
         await appendHistoryRow({ id: nextId, nom: data.nom }, 'Ajout', montant);
@@ -780,14 +637,14 @@
 
       if (data.action === 'modifierHistorique') {
         const targetId = Number(data.indexLigne);
-        const { data: target, error: targetError } = await supabase.from('historique').select('*').eq('id', targetId).single();
+        const { data: target, error: targetError } = await supabaseClient.from('historique').select('*').eq('id', targetId).single();
         if (targetError || !target) throw new Error("Ligne d'historique introuvable.");
 
         const nouveauMontant = toNumber(data.nouveauMontant);
         const ancienMontant = toNumber(target.montant);
         const delta = nouveauMontant - ancienMontant;
 
-        const { error: updateError } = await supabase.from('historique').update({ montant: Number(nouveauMontant.toFixed(2)) }).eq('id', targetId);
+        const { error: updateError } = await supabaseClient.from('historique').update({ montant: Number(nouveauMontant.toFixed(2)) }).eq('id', targetId);
         if (updateError) throw updateError;
 
         const { items: cards } = await readCardsRaw();
@@ -804,7 +661,7 @@
 
       if (data.action === 'supprimerHistorique') {
         const targetId = Number(data.indexLigne);
-        const { data: target, error: targetError } = await supabase.from('historique').select('*').eq('id', targetId).single();
+        const { data: target, error: targetError } = await supabaseClient.from('historique').select('*').eq('id', targetId).single();
         if (targetError || !target) throw new Error("Ligne d'historique introuvable.");
 
         const { items: cards } = await readCardsRaw();
@@ -817,14 +674,13 @@
           await updateCardSolde(card, toNumber(card.solde) + adjustment);
         }
 
-        const { error: deleteError } = await supabase.from('historique').delete().eq('id', targetId);
+        const { error: deleteError } = await supabaseClient.from('historique').delete().eq('id', targetId);
         if (deleteError) throw deleteError;
         return 'Historique supprimé';
       }
 
       throw new Error(`Action POST non supportée : ${data.action}`);
     }
-
 
     async function chargerDashboard() {
       try {
@@ -847,11 +703,9 @@
       champ.value = valeur;
     }
 
-
-
     async function registerPasskey() {
       try {
-        const { data, error } = await supabase.auth.registerPasskey();
+        const { data, error } = await supabaseClient.auth.registerPasskey();
         if (error) {
           showError("Erreur d'enregistrement biométrique : " + error.message);
         } else {
@@ -864,7 +718,7 @@
 
     async function signInWithPasskey() {
       try {
-        const { data, error } = await supabase.auth.signInWithPasskey();
+        const { data, error } = await supabaseClient.auth.signInWithPasskey();
         if (error) {
            if(error.message.includes("passkey_disabled")) {
                return showError("La connexion par Passkey n'est pas activée sur le serveur. Utilisez l'email.");
@@ -892,7 +746,7 @@
       btn.disabled = true;
       btn.innerHTML = 'Connexion...';
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
         email: email,
         password: password
       });
@@ -912,7 +766,7 @@
     }
 
     async function signOut() {
-      await supabase.auth.signOut();
+      await supabaseClient.auth.signOut();
       userName = '';
       currentUserEmail = '';
       localStorage.removeItem('app_cartes_user_first_name');
@@ -930,7 +784,7 @@
       const accessBtn = document.getElementById('btn-access');
       const logoutBtn = document.getElementById('btn-logout');
       const methodsStep = document.getElementById('auth-methods-step');
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabaseClient.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           status.innerText = userName ? `Connecté en tant que ${userName} ✅` : "Connecté ✅";
           accessBtn.style.display = 'inline-block';
@@ -946,7 +800,7 @@
     }
 
     function switchScreen(screenId) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabaseClient.auth.getSession().then(({ data: { session } }) => {
         if (screenId !== 'screen-auth' && !session) {
           showError("Connexion requise.");
           screenId = 'screen-auth';
@@ -958,18 +812,13 @@
       });
     }
 
-
     function showError(message) {
       const errorBanner = document.getElementById('global-error');
       document.getElementById('error-text').innerText = message;
       errorBanner.style.display = 'flex';
       if(errorTimeout) clearTimeout(errorTimeout);
       errorTimeout = setTimeout(() => { errorBanner.style.display = 'none'; }, 4000);
-      
     }
-
-
-
 
     function gererPleinEcranCode() {
       const codeContainer = document.querySelector('.qr-container');
@@ -1209,15 +1058,15 @@
         div.innerHTML = `
           <div class="hist-details">
             <div class="hist-header">
-              <span>${h.nom} (${h.action})</span>
+              <span>${h.nom_carte} (${h.action})</span>
               <span class="${cl}">${sym}${h.montant}€</span>
             </div>
             <div class="hist-meta">
-              <span>Par ${h.user}</span>
-              <span>${h.date}</span>
+              <span>Par ${h.utilisateur}</span>
+              <span>${new Date(h.date).toLocaleString('fr-FR')}</span>
             </div>
           </div>
-          <button class="btn-edit-hist" onclick='ouvrirModalEdit(${h.indexLigne}, "${h.nom}", ${h.montant})' title="Modifier/Supprimer">
+          <button class="btn-edit-hist" onclick='ouvrirModalEdit(${h.id}, "${h.nom_carte}", ${h.montant})' title="Modifier/Supprimer">
             <span class="material-icons">edit</span>
           </button>
         `;
@@ -1290,6 +1139,7 @@
         btnDelete.innerHTML = '<span class="material-icons">delete</span> Supprimer cette ligne';
       }
     }
+
   </script>
 </body>
 </html>
