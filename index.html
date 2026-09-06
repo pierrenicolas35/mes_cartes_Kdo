@@ -271,16 +271,9 @@
             </button>
             <p style="font-size:0.8rem; color:#888; margin-bottom:10px;">Ou avec email :</p>
             <input type="email" id="auth-email" placeholder="Adresse email" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;" />
-            <button class="btn btn-back" id="btn-send-otp" onclick="sendOtp()" style="margin-top:0;">
-            <span class="material-icons">send</span> Envoyer le code
-            </button>
-        </div>
-
-        <div id="auth-otp-step" style="display:none;">
-            <p style="text-align:center; font-size:0.8rem; margin-bottom:10px;">Un code vous a été envoyé. Saisissez-le ci-dessous.</p>
-            <input type="text" id="auth-otp" placeholder="Code à 6 chiffres" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;" />
-            <button class="btn btn-submit" id="btn-verify-otp" onclick="verifyOtpCode()">
-            <span class="material-icons">check</span> Valider le code
+            <input type="password" id="auth-password" placeholder="Mot de passe" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;" />
+            <button class="btn btn-back" id="btn-login-password" onclick="signInWithPassword()" style="margin-top:0;">
+            <span class="material-icons">login</span> Se connecter
             </button>
         </div>
 
@@ -340,6 +333,16 @@
             <div>
               <h4>Historique</h4>
               <p>Suivi des dépenses</p>
+            </div>
+          </div>
+
+          <div class="grid-action-card" onclick="registerPasskey()">
+            <div class="grid-icon-box" style="background-color: var(--primary); color: white;">
+              <span class="material-icons">fingerprint</span>
+            </div>
+            <div>
+              <h4>Biométrie</h4>
+              <p>Activer la biométrie</p>
             </div>
           </div>
         </div>
@@ -846,6 +849,19 @@
 
 
 
+    async function registerPasskey() {
+      try {
+        const { data, error } = await supabase.auth.registerPasskey();
+        if (error) {
+          showError("Erreur d'enregistrement biométrique : " + error.message);
+        } else {
+          alert("Biométrie activée avec succès ! Vous pouvez maintenant l'utiliser pour vous connecter.");
+        }
+      } catch(err) {
+        showError("Erreur : " + err.message);
+      }
+    }
+
     async function signInWithPasskey() {
       try {
         const { data, error } = await supabase.auth.signInWithPasskey();
@@ -866,55 +882,30 @@
       }
     }
 
-    async function sendOtp() {
+    async function signInWithPassword() {
       const email = document.getElementById('auth-email').value;
-      if (!email) return showError("Veuillez entrer une adresse email.");
+      const password = document.getElementById('auth-password').value;
 
-      const btn = document.getElementById('btn-send-otp');
+      if (!email || !password) return showError("Veuillez entrer votre email et mot de passe.");
+
+      const btn = document.getElementById('btn-login-password');
       btn.disabled = true;
-      btn.innerHTML = 'Envoi...';
+      btn.innerHTML = 'Connexion...';
 
-      const { data, error } = await supabase.auth.signInWithOtp({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
-        options: {
-          shouldCreateUser: true
-        }
+        password: password
       });
 
       btn.disabled = false;
-      btn.innerHTML = '<span class="material-icons">send</span> Envoyer le code';
+      btn.innerHTML = '<span class="material-icons">login</span> Se connecter';
 
       if (error) {
-        return showError("Erreur d'envoi : " + error.message);
+        return showError("Erreur de connexion : " + error.message);
       }
 
       currentUserEmail = email;
-      document.getElementById('auth-methods-step').style.display = 'none';
-      document.getElementById('auth-otp-step').style.display = 'block';
-    }
-
-    async function verifyOtpCode() {
-      const token = document.getElementById('auth-otp').value;
-      if (!token || token.length !== 6) return showError("Veuillez entrer le code à 6 chiffres.");
-
-      const btn = document.getElementById('btn-verify-otp');
-      btn.disabled = true;
-      btn.innerHTML = 'Validation...';
-
-      const { data: { session }, error } = await supabase.auth.verifyOtp({
-        email: currentUserEmail,
-        token: token,
-        type: 'email'
-      });
-
-      btn.disabled = false;
-      btn.innerHTML = '<span class="material-icons">check</span> Valider le code';
-
-      if (error) {
-        return showError("Erreur de validation : " + error.message);
-      }
-
-      userName = session.user.user_metadata?.first_name || session.user.email.split('@')[0];
+      userName = data.session.user.user_metadata?.first_name || data.session.user.email.split('@')[0];
       localStorage.setItem('app_cartes_user_first_name', userName);
       mettreAJourEtatConnexion();
       switchScreen('screen-menu');
@@ -927,9 +918,8 @@
       localStorage.removeItem('app_cartes_user_first_name');
 
       document.getElementById('auth-email').value = '';
-      document.getElementById('auth-otp').value = '';
+      document.getElementById('auth-password').value = '';
       document.getElementById('auth-methods-step').style.display = 'block';
-      document.getElementById('auth-otp-step').style.display = 'none';
 
       mettreAJourEtatConnexion();
       switchScreen('screen-auth');
@@ -940,21 +930,17 @@
       const accessBtn = document.getElementById('btn-access');
       const logoutBtn = document.getElementById('btn-logout');
       const methodsStep = document.getElementById('auth-methods-step');
-      const otpStep = document.getElementById('auth-otp-step');
-
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           status.innerText = userName ? `Connecté en tant que ${userName} ✅` : "Connecté ✅";
           accessBtn.style.display = 'inline-block';
           logoutBtn.style.display = 'inline-block';
           methodsStep.style.display = 'none';
-          otpStep.style.display = 'none';
         } else {
           status.innerText = "Non connecté";
           accessBtn.style.display = 'none';
           logoutBtn.style.display = 'none';
           methodsStep.style.display = 'block';
-          otpStep.style.display = 'none';
         }
       });
     }
