@@ -1,1644 +1,1320 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <title>Mes Cartes Cadeaux</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Mes Cartes Cadeaux</title>
+  
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2b5876">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <link rel="manifest" href="./manifest.json" />
-    <meta name="theme-color" content="#2b5876" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  
+  <style>
+    :root {
+      --primary: #2b5876;
+      --secondary: #4e4376;
+      --background: #f4f7fb;
+      --text: #2c3e50;
+      --card-bg: #ffffff;
+      --success: #2e7d32;
+      --danger: #d32f2f;
+      --radius: 20px;
+      --shadow: 0 10px 25px rgba(43, 88, 118, 0.08);
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
-    <link
-      href="https://fonts.googleapis.com/icon?family=Material+Icons"
-      rel="stylesheet"
-    />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      width: 100%;
+      overflow: hidden;
+      background-color: var(--background);
+      color: var(--text);
+    }
 
-    <style>
-      :root {
-        --primary: #2b5876;
-        --secondary: #4e4376;
-        --background: #f4f7fb;
-        --text: #2c3e50;
-        --card-bg: #ffffff;
-        --success: #2e7d32;
-        --danger: #d32f2f;
-        --radius: 20px;
-        --shadow: 0 10px 25px rgba(43, 88, 118, 0.08);
-      }
+    body {
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      }
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
 
-      html,
-      body {
-        height: 100%;
-        height: 100dvh;
-        width: 100%;
-        overflow: hidden;
-        background-color: var(--background);
-        color: var(--text);
-      }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 5px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 1.3rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 8px; }
 
-      body {
-        padding: 12px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
+    .screen {
+      display: none;
+      background: transparent;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .screen.active { display: flex; }
 
-      .app-container {
-        width: 100%;
-        max-width: 480px;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
+    /* Style spécifique de la page d'accueil moderne */
+    .home-dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      flex: 1;
+      overflow-y: auto;
+    }
 
-      header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 5px;
-        flex-shrink: 0;
-      }
-      header h1 {
-        font-size: 1.3rem;
-        color: var(--primary);
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
+    /* Carte KPI de résumé */
+    .kpi-card {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: 0 12px 28px rgba(43, 88, 118, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::after {
+      content: 'card_giftcard';
+      font-family: 'Material Icons';
+      position: absolute;
+      right: -15px;
+      bottom: -20px;
+      font-size: 8rem;
+      opacity: 0.08;
+      color: white;
+    }
+    .kpi-header { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; }
+    .kpi-value { font-size: 2.2rem; font-weight: 800; }
+    .kpi-sub { font-size: 0.85rem; opacity: 0.9; display: flex; align-items: center; gap: 5px; }
 
-      .screen {
-        display: none;
-        background: transparent;
-        flex: 1;
-        flex-direction: column;
-        min-height: 0;
-        overflow: hidden;
-      }
-      .screen.active {
-        display: flex;
-      }
+    /* Actions Dashboard */
+    .action-section-title { font-size: 0.9rem; font-weight: 700; color: #8898aa; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px; }
 
-      /* Style spécifique de la page d'accueil moderne */
-      .home-dashboard {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        flex: 1;
-        overflow-y: auto;
-      }
+    /* Bouton principal HERO */
+    .hero-action-btn {
+      background: white;
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      box-shadow: var(--shadow);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    .hero-action-btn:active { transform: scale(0.98); border-color: var(--primary); }
+    .hero-icon-box {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: #eef4f8;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .hero-icon-box .material-icons { font-size: 2rem; }
+    .hero-text h3 { font-size: 1.15rem; color: var(--text); font-weight: 700; margin-bottom: 2px; }
+    .hero-text p { font-size: 0.85rem; color: #7a8b9e; }
 
-      /* Carte KPI de résumé */
-      .kpi-card {
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        color: white;
-        border-radius: var(--radius);
-        padding: 22px;
-        box-shadow: 0 12px 28px rgba(43, 88, 118, 0.25);
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        position: relative;
-        overflow: hidden;
-      }
-      .kpi-card::after {
-        content: "card_giftcard";
-        font-family: "Material Icons";
-        position: absolute;
-        right: -15px;
-        bottom: -20px;
-        font-size: 8rem;
-        opacity: 0.08;
-        color: white;
-      }
-      .kpi-header {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        opacity: 0.85;
-      }
-      .kpi-value {
-        font-size: 2.2rem;
-        font-weight: 800;
-      }
-      .kpi-sub {
-        font-size: 0.85rem;
-        opacity: 0.9;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-      }
+    /* Grille 2 colonnes pour actions secondaires */
+    .secondary-actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .grid-action-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .grid-action-card:active { transform: scale(0.97); }
+    .grid-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .grid-icon-box.add { background: #e8f5e9; color: var(--success); }
+    .grid-icon-box.hist { background: #f3e5f5; color: var(--secondary); }
+    .grid-action-card h4 { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+    .grid-action-card p { font-size: 0.78rem; color: #8898aa; }
 
-      /* Actions Dashboard */
-      .action-section-title {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #8898aa;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-top: 5px;
-      }
+    /* Footer discret */
+    .home-footer { text-align: center; font-size: 0.75rem; color: #a0aec0; margin-top: auto; padding: 10px 0; display: flex; align-items: center; justify-content: center; gap: 4px; }
 
-      /* Bouton principal HERO */
-      .hero-action-btn {
-        background: white;
-        border-radius: var(--radius);
-        padding: 22px;
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        box-shadow: var(--shadow);
-        border: 2px solid transparent;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-align: left;
-      }
-      .hero-action-btn:active {
-        transform: scale(0.98);
-        border-color: var(--primary);
-      }
-      .hero-icon-box {
-        width: 56px;
-        height: 56px;
-        border-radius: 16px;
-        background: #eef4f8;
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-      .hero-icon-box .material-icons {
-        font-size: 2rem;
-      }
-      .hero-text h3 {
-        font-size: 1.15rem;
-        color: var(--text);
-        font-weight: 700;
-        margin-bottom: 2px;
-      }
-      .hero-text p {
-        font-size: 0.85rem;
-        color: #7a8b9e;
-      }
+    /* Style des fenêtres internes */
+    .internal-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
 
-      /* Grille 2 colonnes pour actions secondaires */
-      .secondary-actions-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-      .grid-action-card {
-        background: white;
-        border-radius: var(--radius);
-        padding: 18px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        box-shadow: var(--shadow);
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      .grid-action-card:active {
-        transform: scale(0.97);
-      }
-      .grid-icon-box {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .grid-icon-box.add {
-        background: #e8f5e9;
-        color: var(--success);
-      }
-      .grid-icon-box.hist {
-        background: #f3e5f5;
-        color: var(--secondary);
-      }
-      .grid-action-card h4 {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: var(--text);
-      }
-      .grid-action-card p {
-        font-size: 0.78rem;
-        color: #8898aa;
-      }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
 
-      /* Footer discret */
-      .home-footer {
-        text-align: center;
-        font-size: 0.75rem;
-        color: #a0aec0;
-        margin-top: auto;
-        padding: 10px 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-      }
+    .banner { display: none; padding: 12px; border-radius: 12px; text-align: center; font-weight: 600; margin-bottom: 12px; align-items: center; justify-content: center; gap: 8px; animation: slideDown 0.3s ease; width: 100%; flex-shrink: 0; }
+    .success-banner { background-color: #e8f5e9; color: var(--success); }
+    .error-banner { background-color: #ffebee; color: var(--danger); }
 
-      /* Style des fenêtres internes */
-      .internal-card {
-        background: var(--card-bg);
-        border-radius: var(--radius);
-        padding: 20px;
-        box-shadow: var(--shadow);
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        overflow: hidden;
-      }
+    .screen-content { flex: 1; overflow-y: auto; padding-right: 2px; display: flex; flex-direction: column; gap: 12px; }
 
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      @keyframes slideDown {
-        from {
-          opacity: 0;
-          transform: translateY(-15px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #555; }
+    input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; background-color: #fafafa; }
 
-      .banner {
-        display: none;
-        padding: 12px;
-        border-radius: 12px;
-        text-align: center;
-        font-weight: 600;
-        margin-bottom: 12px;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        animation: slideDown 0.3s ease;
-        width: 100%;
-        flex-shrink: 0;
-      }
-      .success-banner {
-        background-color: #e8f5e9;
-        color: var(--success);
-      }
-      .error-banner {
-        background-color: #ffebee;
-        color: var(--danger);
-      }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; }
+    .btn:disabled { background-color: #ccc !important; color: #888 !important; cursor: not-allowed; }
+    .btn-submit { background-color: var(--success); color: white; margin-top: 8px; }
+    .btn-danger { background-color: var(--danger); color: white; margin-top: 8px; }
+    .btn-back { background-color: #eee; color: #555; margin-top: 10px; }
+    .btn-logout { background-color: #eee; color: #555; margin-top: 0; }
+    .btn-camera { background-color: var(--secondary); color: white; width: auto; padding: 10px 14px; }
+    .btn-gallery { background-color: var(--primary); color: white; width: auto; padding: 10px 14px; }
+    .btn-toggle-code { background-color: #e0e0e0; color: #333; padding: 10px; font-size: 0.85rem; margin-top: 8px; }
+    .btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 50%; }
+    .btn-icon .material-icons { font-size: 1.1rem; margin: 0; }
 
-      .screen-content {
-        flex: 1;
-        overflow-y: auto;
-        padding-right: 2px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
+    .item-list { display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 2px; }
+    .card-item { padding: 16px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .card-info h3 { font-size: 1.05rem; color: #222; }
+    .card-info p { font-size: 0.85rem; color: #777; }
+    .btn-select { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
 
-      .form-group {
-        margin-bottom: 12px;
-      }
-      label {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #555;
-      }
-      input {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        font-size: 1rem;
-        background-color: #fafafa;
-      }
+    .qr-container { text-align: center; margin: 8px 0; background: #f9f9f9; padding: 12px; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 220px; cursor: pointer; flex-shrink: 0; }
+    #qr-code-element img { margin: 0 auto; max-width: 100%; }
+    #barcode-element { max-width: 100%; height: auto; display: none; }
 
-      .btn {
-        width: 100%;
-        padding: 14px;
-        border: none;
-        border-radius: 12px;
-        font-size: 1rem;
-        font-weight: bold;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        flex-shrink: 0;
-      }
-      .btn:disabled {
-        background-color: #ccc !important;
-        color: #888 !important;
-        cursor: not-allowed;
-      }
-      .btn-submit {
-        background-color: var(--success);
-        color: white;
-        margin-top: 8px;
-      }
-      .btn-danger {
-        background-color: var(--danger);
-        color: white;
-        margin-top: 8px;
-      }
-      .btn-back {
-        background-color: #eee;
-        color: #555;
-        margin-top: 10px;
-      }
-      .btn-logout {
-        background-color: #eee;
-        color: #555;
-        margin-top: 0;
-      }
-      .btn-camera {
-        background-color: var(--secondary);
-        color: white;
-        width: auto;
-        padding: 10px 14px;
-      }
-      .btn-gallery {
-        background-color: var(--primary);
-        color: white;
-        width: auto;
-        padding: 10px 14px;
-      }
-      .btn-toggle-code {
-        background-color: #e0e0e0;
-        color: #333;
-        padding: 10px;
-        font-size: 0.85rem;
-        margin-top: 8px;
-      }
-      .btn-icon {
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        border-radius: 50%;
-      }
-      .btn-icon .material-icons {
-        font-size: 1.1rem;
-        margin: 0;
-      }
+    .hist-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+    .hist-details { flex: 1; }
+    .hist-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 0.95rem; margin-bottom: 3px; padding-right: 8px; }
+    .hist-meta { display: flex; justify-content: space-between; color: #999; font-size: 0.78rem; padding-right: 8px; }
+    .btn-edit-hist { background: none; border: none; color: var(--primary); cursor: pointer; padding: 6px; border-radius: 8px; }
 
-      .item-list {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        flex: 1;
-        overflow-y: auto;
-        padding-right: 2px;
-      }
-      .card-item {
-        padding: 16px;
-        border: 1px solid #eee;
-        border-radius: 14px;
-        background: #fff;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
-      }
-      .card-info h3 {
-        font-size: 1.05rem;
-        color: #222;
-      }
-      .card-info p {
-        font-size: 0.85rem;
-        color: #777;
-      }
-      .btn-select {
-        background: var(--primary);
-        color: white;
-        border: none;
-        padding: 10px 14px;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        cursor: pointer;
-      }
+    .plus { color: var(--success); }
+    .moins { color: var(--danger); }
 
-      .qr-container {
-        text-align: center;
-        margin: 8px 0;
-        background: #f9f9f9;
-        padding: 12px;
-        border-radius: 15px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 220px;
-        cursor: pointer;
-        flex-shrink: 0;
-      }
-      #qr-code-element img {
-        margin: 0 auto;
-        max-width: 100%;
-      }
-      #barcode-element {
-        max-width: 100%;
-        height: auto;
-        display: none;
-      }
+    .loading { text-align: center; padding: 30px; color: #888; font-style: italic; }
 
-      .hist-item {
-        padding: 12px 0;
-        border-bottom: 1px solid #f0f0f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .hist-details {
-        flex: 1;
-      }
-      .hist-header {
-        display: flex;
-        justify-content: space-between;
-        font-weight: 600;
-        font-size: 0.95rem;
-        margin-bottom: 3px;
-        padding-right: 8px;
-      }
-      .hist-meta {
-        display: flex;
-        justify-content: space-between;
-        color: #999;
-        font-size: 0.78rem;
-        padding-right: 8px;
-      }
-      .btn-edit-hist {
-        background: none;
-        border: none;
-        color: var(--primary);
-        cursor: pointer;
-        padding: 6px;
-        border-radius: 8px;
-      }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
+    .modal-content { background: white; padding: 20px; border-radius: 20px; width: 100%; max-width: 380px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+  </style>
+</head>
+<body>
 
-      .plus {
-        color: var(--success);
-      }
-      .moins {
-        color: var(--danger);
-      }
+  <div class="app-container">
+    <header>
+      <h1><span class="material-icons">card_giftcard</span> Mes Cartes</h1>
+      <button class="btn btn-logout btn-icon" id="btn-google-logout" onclick="deconnecterGoogle()" title="Déconnexion Google" aria-label="Déconnexion Google" style="margin:0; display:none;">
+        <span class="material-icons">logout</span>
+      </button>
+    </header>
 
-      .loading {
-        text-align: center;
-        padding: 30px;
-        color: #888;
-        font-style: italic;
-      }
+    <div id="global-error" class="banner error-banner">
+      <span class="material-icons">error_outline</span> 
+      <span id="error-text">Message d'erreur</span>
+    </div>
 
-      .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.5);
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        padding: 15px;
-      }
-      .modal-content {
-        background: white;
-        padding: 20px;
-        border-radius: 20px;
-        width: 100%;
-        max-width: 380px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-      }
-    </style>
-  </head>
-  <body>
-    <div class="app-container">
-      <header>
-        <h1><span class="material-icons">card_giftcard</span> Mes Cartes</h1>
-        <button
-          class="btn btn-logout btn-icon"
-          id="btn-logout"
-          onclick="deconnecter()"
-          title="Déconnexion"
-          aria-label="Déconnexion"
-          style="margin: 0; display: none"
-        >
-          <span class="material-icons">logout</span>
+    <!-- ÉCRAN 0 : AUTH -->
+    <div id="screen-auth" class="screen active">
+      <div class="internal-card">
+        <h2 style="text-align: center; color: var(--primary);">Accès Sécurisé</h2>
+        <p style="text-align: center; color: #666; margin: 15px 0 10px 0; font-size:0.9rem;">Connectez votre compte Google pour accéder à l’application.</p>
+        <p id="google-auth-status" style="text-align:center; color:#777; margin-bottom:10px; font-size:0.85rem;">Google non connecté</p>
+        <button class="btn btn-back" id="btn-google-connect" onclick="demarrerConnexionGoogle()" style="margin-top:0;">
+          <span class="material-icons">login</span> Connexion Google
         </button>
-      </header>
-
-      <div id="global-error" class="banner error-banner">
-        <span class="material-icons">error_outline</span>
-        <span id="error-text">Message d'erreur</span>
+        <button class="btn btn-submit" id="btn-access" onclick="validerAccesGoogle()">
+          <span class="material-icons">lock_open</span> Accéder
+        </button>
       </div>
+    </div>
 
-      <!-- ÉCRAN 0 : AUTH -->
-      <div id="screen-auth" class="screen active">
-        <div class="internal-card">
-          <h2 style="text-align: center; color: var(--primary)">
-            Accès Sécurisé
-          </h2>
-          <p
-            style="
-              text-align: center;
-              color: #666;
-              margin: 15px 0 10px 0;
-              font-size: 0.9rem;
-            "
-          >
-            Connectez-vous pour accéder à l’application.
+    <!-- ÉCRAN 1 : DASHBOARD D'ACCUEIL REDESSINÉ -->
+    <div id="screen-menu" class="screen">
+      <div class="home-dashboard">
+        
+        <!-- KPI Card -->
+        <div class="kpi-card">
+          <div class="kpi-header">Portefeuille Familial</div>
+          <div class="kpi-value" id="dash-total-solde">-- €</div>
+          <div class="kpi-sub">
+            <span class="material-icons" style="font-size:1rem;">check_circle</span>
+            <span id="dash-nb-cartes">-- cartes disponibles</span>
+          </div>
+        </div>
+
+        <div class="action-section-title">Actions rapides</div>
+
+        <!-- Bouton Hero Principal -->
+        <div class="hero-action-btn" onclick="openUseScreen()">
+          <div class="hero-icon-box">
+            <span class="material-icons">qr_code_scanner</span>
+          </div>
+          <div class="hero-text">
+            <h3>Utiliser une carte</h3>
+            <p>Scanner un QR code en caisse</p>
+          </div>
+        </div>
+
+        <!-- Grille d'actions secondaires -->
+        <div class="secondary-actions-grid">
+          <div class="grid-action-card" onclick="switchScreen('screen-add')">
+            <div class="grid-icon-box add">
+              <span class="material-icons">add_a_photo</span>
+            </div>
+            <div>
+              <h4>Ajouter</h4>
+              <p>Nouvelle carte</p>
+            </div>
+          </div>
+
+          <div class="grid-action-card" onclick="openHistoryScreen()">
+            <div class="grid-icon-box hist">
+              <span class="material-icons">history</span>
+            </div>
+            <div>
+              <h4>Historique</h4>
+              <p>Suivi des dépenses</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="home-footer">
+          <span class="material-icons" style="font-size:0.9rem;">verified_user</span> Synchronisé & Sécurisé
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ÉCRAN 2 : AJOUTER UNE CARTE -->
+    <div id="screen-add" class="screen">
+      <div class="internal-card">
+        <h2>Nouvelle Carte</h2>
+        
+        <div id="add-success" class="banner success-banner">
+          <span class="material-icons">check_circle</span> Carte enregistrée !
+        </div>
+
+        <div class="screen-content" id="add-form-content">
+          <div class="form-group" style="margin-top:5px;">
+            <label>Enseigne / Magasin</label>
+            <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon...">
+          </div>
+          <div class="form-group">
+            <label>Montant Initial (€)</label>
+            <input type="text" inputmode="decimal" id="add-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
+          </div>
+          <div class="form-group">
+            <label>Date de validité (Optionnel)</label>
+            <input type="date" id="add-date">
+          </div>
+          <div class="form-group">
+            <label>Données du QR/Code-barres</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="add-code" placeholder="Texte du code" style="flex: 1;">
+              
+              <button class="btn btn-camera" onclick="document.getElementById('qr-input-camera').click()" title="Photo">
+                <span class="material-icons">photo_camera</span>
+              </button>
+              <button class="btn btn-gallery" onclick="document.getElementById('qr-input-gallery').click()" title="Screenshot">
+                <span class="material-icons">image</span>
+              </button>
+              
+              <input type="file" id="qr-input-camera" accept="image/*" capture="environment" style="display:none" onchange="analyserPhoto(event)">
+              <input type="file" id="qr-input-gallery" accept="image/*" style="display:none" onchange="analyserPhoto(event)">
+            </div>
+            <div id="reader" style="display:none;"></div>
+          </div>
+        </div>
+        
+        <button class="btn btn-submit" id="btn-save-card" onclick="saveNewCard()">
+          <span class="material-icons">save</span> Enregistrer la carte
+        </button>
+        <button class="btn btn-back" id="btn-back-card" onclick="switchScreen('screen-menu')">Retour</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN 3 : SÉLECTION DE CARTE -->
+    <div id="screen-use-list" class="screen">
+      <div class="internal-card">
+        <h2>Choisir une carte</h2>
+        <div id="list-cartes-container" class="item-list"></div>
+        <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN 4 : DÉBIT ET APERÇU -->
+    <div id="screen-use-action" class="screen">
+      <div class="internal-card">
+        <h2 id="action-title" style="text-align: center;">...</h2>
+        
+        <div id="use-success" class="banner success-banner">
+          <span class="material-icons">check_circle</span> Solde mis à jour !
+        </div>
+
+        <div class="screen-content" id="use-form-content">
+          <p style="text-align: center; margin: 4px 0; color:#666;">
+            Solde : <span id="action-solde" style="font-weight:bold; color: var(--primary); font-size: 1.15rem;">0</span>€
           </p>
-
-          <div id="auth-config" style="margin-bottom: 15px; display: none">
-            <p style="font-size: 0.8rem; color: #d32f2f; margin-bottom: 5px">
-              Configuration Supabase manquante
-            </p>
-            <input
-              type="text"
-              id="supabase-url"
-              placeholder="Supabase Project URL"
-              style="margin-bottom: 8px"
-            />
-            <input
-              type="text"
-              id="supabase-key"
-              placeholder="Supabase Anon Key"
-            />
-            <button
-              class="btn btn-submit"
-              onclick="sauvegarderConfigSupabase()"
-              style="margin-top: 8px"
-            >
-              Enregistrer Config
-            </button>
+          <p id="action-validite" style="text-align: center; margin-bottom: 4px; color: var(--danger); font-size: 0.85rem; display: none;"></p>
+          
+          <p style="text-align:center; font-size:0.75rem; color:#888;">Cliquez sur le code pour le plein écran</p>
+          
+          <div class="qr-container" onclick="gererPleinEcranCode()">
+            <div id="qr-code-element"></div>
+            <svg id="barcode-element"></svg>
           </div>
-
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="auth-email" placeholder="votre@email.com" />
-          </div>
-          <div class="form-group">
-            <label>Mot de passe</label>
-            <input type="password" id="auth-password" placeholder="••••••••" />
-          </div>
-
-          <p
-            id="auth-status"
-            style="
-              text-align: center;
-              color: #777;
-              margin-bottom: 10px;
-              font-size: 0.85rem;
-            "
-          ></p>
-
-          <button
-            class="btn btn-submit"
-            id="btn-login"
-            onclick="connexionClassique()"
-          >
-            <span class="material-icons">login</span> Se connecter
-          </button>
-          <button
-            class="btn btn-back"
-            id="btn-register"
-            onclick="inscriptionClassique()"
-            style="margin-top: 10px"
-          >
-            <span class="material-icons">person_add</span> S'inscrire
+          
+          <button class="btn btn-toggle-code" id="btn-toggle-view" onclick="basculerFormatCode()">
+            <span class="material-icons">barcode_reader</span> Afficher en Code-barres
           </button>
 
-          <hr
-            style="margin: 15px 0; border: none; border-top: 1px solid #eee"
-          />
-
-          <button
-            class="btn btn-gallery"
-            id="btn-passkey"
-            onclick="connexionBiometrique()"
-            style="width: 100%; display: flex"
-          >
-            <span class="material-icons">fingerprint</span> Utiliser Touch ID /
-            Face ID
-          </button>
-        </div>
-      </div>
-
-      <!-- ÉCRAN 1 : DASHBOARD D'ACCUEIL REDESSINÉ -->
-      <div id="screen-menu" class="screen">
-        <div class="home-dashboard">
-          <!-- KPI Card -->
-          <div class="kpi-card">
-            <div class="kpi-header">Portefeuille Familial</div>
-            <div class="kpi-value" id="dash-total-solde">-- €</div>
-            <div class="kpi-sub">
-              <span class="material-icons" style="font-size: 1rem"
-                >check_circle</span
-              >
-              <span id="dash-nb-cartes">-- cartes disponibles</span>
-            </div>
-          </div>
-
-          <div class="action-section-title">Actions rapides</div>
-
-          <!-- Bouton Hero Principal -->
-          <div class="hero-action-btn" onclick="openUseScreen()">
-            <div class="hero-icon-box">
-              <span class="material-icons">qr_code_scanner</span>
-            </div>
-            <div class="hero-text">
-              <h3>Utiliser une carte</h3>
-              <p>Scanner un QR code en caisse</p>
-            </div>
-          </div>
-
-          <!-- Grille d'actions secondaires -->
-          <div class="secondary-actions-grid">
-            <div class="grid-action-card" onclick="switchScreen('screen-add')">
-              <div class="grid-icon-box add">
-                <span class="material-icons">add_a_photo</span>
-              </div>
-              <div>
-                <h4>Ajouter</h4>
-                <p>Nouvelle carte</p>
-              </div>
-            </div>
-
-            <div class="grid-action-card" onclick="openHistoryScreen()">
-              <div class="grid-icon-box hist">
-                <span class="material-icons">history</span>
-              </div>
-              <div>
-                <h4>Historique</h4>
-                <p>Suivi des dépenses</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div class="home-footer">
-            <span class="material-icons" style="font-size: 0.9rem"
-              >verified_user</span
-            >
-            Synchronisé & Sécurisé
+          <div class="form-group" style="margin-top: 10px;">
+            <label>Montant utilisé (€)</label>
+            <input type="text" inputmode="decimal" id="use-montant" placeholder="0.00" oninput="nettoyerSaisieNumerique(this)">
           </div>
         </div>
-      </div>
 
-      <!-- ÉCRAN 2 : AJOUTER UNE CARTE -->
-      <div id="screen-add" class="screen">
-        <div class="internal-card">
-          <h2>Nouvelle Carte</h2>
-
-          <div id="add-success" class="banner success-banner">
-            <span class="material-icons">check_circle</span> Carte enregistrée !
-          </div>
-
-          <div class="screen-content" id="add-form-content">
-            <div class="form-group" style="margin-top: 5px">
-              <label>Enseigne / Magasin</label>
-              <input
-                type="text"
-                id="add-nom"
-                placeholder="Ex: Fnac, Decathlon..."
-              />
-            </div>
-            <div class="form-group">
-              <label>Montant Initial (€)</label>
-              <input
-                type="text"
-                inputmode="decimal"
-                id="add-montant"
-                placeholder="0.00"
-                oninput="nettoyerSaisieNumerique(this)"
-              />
-            </div>
-            <div class="form-group">
-              <label>Date de validité (Optionnel)</label>
-              <input type="date" id="add-date" />
-            </div>
-            <div class="form-group">
-              <label>Données du QR/Code-barres</label>
-              <div style="display: flex; gap: 8px">
-                <input
-                  type="text"
-                  id="add-code"
-                  placeholder="Texte du code"
-                  style="flex: 1"
-                />
-
-                <button
-                  class="btn btn-camera"
-                  onclick="document.getElementById('qr-input-camera').click()"
-                  title="Photo"
-                >
-                  <span class="material-icons">photo_camera</span>
-                </button>
-                <button
-                  class="btn btn-gallery"
-                  onclick="document.getElementById('qr-input-gallery').click()"
-                  title="Screenshot"
-                >
-                  <span class="material-icons">image</span>
-                </button>
-
-                <input
-                  type="file"
-                  id="qr-input-camera"
-                  accept="image/*"
-                  capture="environment"
-                  style="display: none"
-                  onchange="analyserPhoto(event)"
-                />
-                <input
-                  type="file"
-                  id="qr-input-gallery"
-                  accept="image/*"
-                  style="display: none"
-                  onchange="analyserPhoto(event)"
-                />
-              </div>
-              <div id="reader" style="display: none"></div>
-            </div>
-          </div>
-
-          <button
-            class="btn btn-submit"
-            id="btn-save-card"
-            onclick="saveNewCard()"
-          >
-            <span class="material-icons">save</span> Enregistrer la carte
-          </button>
-          <button
-            class="btn btn-back"
-            id="btn-back-card"
-            onclick="switchScreen('screen-menu')"
-          >
-            Retour
-          </button>
-        </div>
-      </div>
-
-      <!-- ÉCRAN 3 : SÉLECTION DE CARTE -->
-      <div id="screen-use-list" class="screen">
-        <div class="internal-card">
-          <h2>Choisir une carte</h2>
-          <div id="list-cartes-container" class="item-list"></div>
-          <button class="btn btn-back" onclick="switchScreen('screen-menu')">
-            Retour
-          </button>
-        </div>
-      </div>
-
-      <!-- ÉCRAN 4 : DÉBIT ET APERÇU -->
-      <div id="screen-use-action" class="screen">
-        <div class="internal-card">
-          <h2 id="action-title" style="text-align: center">...</h2>
-
-          <div id="use-success" class="banner success-banner">
-            <span class="material-icons">check_circle</span> Solde mis à jour !
-          </div>
-
-          <div class="screen-content" id="use-form-content">
-            <p style="text-align: center; margin: 4px 0; color: #666">
-              Solde :
-              <span
-                id="action-solde"
-                style="
-                  font-weight: bold;
-                  color: var(--primary);
-                  font-size: 1.15rem;
-                "
-                >0</span
-              >€
-            </p>
-            <p
-              id="action-validite"
-              style="
-                text-align: center;
-                margin-bottom: 4px;
-                color: var(--danger);
-                font-size: 0.85rem;
-                display: none;
-              "
-            ></p>
-
-            <p style="text-align: center; font-size: 0.75rem; color: #888">
-              Cliquez sur le code pour le plein écran
-            </p>
-
-            <div class="qr-container" onclick="gererPleinEcranCode()">
-              <div id="qr-code-element"></div>
-              <svg id="barcode-element"></svg>
-            </div>
-
-            <button
-              class="btn btn-toggle-code"
-              id="btn-toggle-view"
-              onclick="basculerFormatCode()"
-            >
-              <span class="material-icons">barcode_reader</span> Afficher en
-              Code-barres
-            </button>
-
-            <div class="form-group" style="margin-top: 10px">
-              <label>Montant utilisé (€)</label>
-              <input
-                type="text"
-                inputmode="decimal"
-                id="use-montant"
-                placeholder="0.00"
-                oninput="nettoyerSaisieNumerique(this)"
-              />
-            </div>
-          </div>
-
-          <button
-            class="btn btn-submit"
-            id="btn-confirm-spend"
-            onclick="confirmSpend()"
-          >
-            <span class="material-icons">done_all</span> Valider la dépense
-          </button>
-          <button
-            class="btn btn-back"
-            id="btn-back-spend"
-            onclick="openUseScreen()"
-          >
-            Retour
-          </button>
-        </div>
-      </div>
-
-      <!-- ÉCRAN 5 : HISTORIQUE -->
-      <div id="screen-history" class="screen">
-        <div class="internal-card">
-          <h2>Historique</h2>
-          <div id="history-container" class="item-list"></div>
-          <button class="btn btn-back" onclick="switchScreen('screen-menu')">
-            Retour
-          </button>
-        </div>
+        <button class="btn btn-submit" id="btn-confirm-spend" onclick="confirmSpend()">
+          <span class="material-icons">done_all</span> Valider la dépense
+        </button>
+        <button class="btn btn-back" id="btn-back-spend" onclick="openUseScreen()">Retour</button>
       </div>
     </div>
 
-    <!-- MODAL D'ÉDITION / SUPPRESSION -->
-    <div id="modal-edit" class="modal-overlay">
-      <div class="modal-content">
-        <h3 style="margin-bottom: 10px; color: var(--primary)">
-          Gérer l'enregistrement
-        </h3>
-        <p
-          id="modal-desc"
-          style="font-size: 0.85rem; color: #666; margin-bottom: 12px"
-        ></p>
-
-        <div class="form-group">
-          <label>Nouveau montant (€)</label>
-          <input
-            type="text"
-            inputmode="decimal"
-            id="edit-montant-input"
-            oninput="nettoyerSaisieNumerique(this)"
-          />
-        </div>
-
-        <button
-          class="btn btn-submit"
-          id="btn-save-edit"
-          onclick="sauvegarderModificationHistorique()"
-        >
-          <span class="material-icons">check</span> Enregistrer
-        </button>
-        <button
-          class="btn btn-danger"
-          id="btn-delete-edit"
-          onclick="supprimerEnregistrementHistorique()"
-        >
-          <span class="material-icons">delete</span> Supprimer cette ligne
-        </button>
-        <button class="btn btn-back" onclick="fermerModalEdit()">
-          Annuler
-        </button>
+    <!-- ÉCRAN 5 : HISTORIQUE -->
+    <div id="screen-history" class="screen">
+      <div class="internal-card">
+        <h2>Historique</h2>
+        <div id="history-container" class="item-list"></div>
+        <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
       </div>
     </div>
 
-    <script>
-      let supabase = null;
-      let currentCard = null;
-      let errorTimeout = null;
-      let modeAffichageCode = "QR";
-      let currentEditIndex = null;
-      let userName = "";
+  </div>
 
-      window.onload = async () => {
-        initialiserSupabase();
-        await verifierSession();
-      };
+  <!-- MODAL D'ÉDITION / SUPPRESSION -->
+  <div id="modal-edit" class="modal-overlay">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 10px; color: var(--primary);">Gérer l'enregistrement</h3>
+      <p id="modal-desc" style="font-size: 0.85rem; color: #666; margin-bottom: 12px;"></p>
+      
+      <div class="form-group">
+        <label>Nouveau montant (€)</label>
+        <input type="text" inputmode="decimal" id="edit-montant-input" oninput="nettoyerSaisieNumerique(this)">
+      </div>
+      
+      <button class="btn btn-submit" id="btn-save-edit" onclick="sauvegarderModificationHistorique()">
+        <span class="material-icons">check</span> Enregistrer
+      </button>
+      <button class="btn btn-danger" id="btn-delete-edit" onclick="supprimerEnregistrementHistorique()">
+        <span class="material-icons">delete</span> Supprimer cette ligne
+      </button>
+      <button class="btn btn-back" onclick="fermerModalEdit()">Annuler</button>
+    </div>
+  </div>
 
-      function initialiserSupabase() {
-        const url = localStorage.getItem("SUPABASE_URL");
-        const key = localStorage.getItem("SUPABASE_KEY");
+  <script>
+    const CLIENT_ID = '363396638469-dvpf49354luh0nosffsp623msplnmcd1.apps.googleusercontent.com';
+    const SPREADSHEET_ID = '13dTh-3G0Wtxur-QhgNPIkg06HWRH3SpEfDjliLEi3j8';
+    const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile';
+    const CARDS_SHEET = 'Cartes';
+    const HISTORY_SHEET = 'Historique';
+    const TOKEN_STORAGE_KEY = 'app_cartes_google_token';
+    const TOKEN_EXPIRY_STORAGE_KEY = 'app_cartes_google_token_expires_at';
+    const USER_FIRST_NAME_KEY = 'app_cartes_google_user_first_name';
+    const TOKEN_EXPIRY_LEEWAY_MS = 30_000;
+    const SHEETS_REQUEST_TIMEOUT_MS = 15_000;
+    const SHEETS_RETRY_COUNT = 2;
 
-        if (url && key) {
-          supabase = window.supabase.createClient(url, key);
-          document.getElementById("auth-config").style.display = "none";
-        } else {
-          document.getElementById("auth-config").style.display = "block";
-        }
+    let currentCard = null;
+    let errorTimeout = null;
+    let modeAffichageCode = 'QR'; 
+    let currentEditIndex = null;
+    let accessToken = '';
+    let accessTokenExpiresAt = 0;
+    let userName = '';
+    let tokenClient = null;
+    let pendingAuthResolve = null;
+    let pendingAuthReject = null;
+    let pendingAuthMode = null;
+
+    window.onload = async () => {
+      await initialiserGIS();
+      restaurerSessionGoogle();
+      mettreAJourEtatConnexion();
+      if (!estConnecteGoogle()) {
+        await tenterConnexionGoogleSilencieuse();
       }
+      mettreAJourEtatConnexion();
+    };
 
-      function sauvegarderConfigSupabase() {
-        const url = document.getElementById("supabase-url").value.trim();
-        const key = document.getElementById("supabase-key").value.trim();
-
-        if (!url || !key) {
-          return showError("Veuillez remplir l'URL et la clé.");
-        }
-
-        localStorage.setItem("SUPABASE_URL", url);
-        localStorage.setItem("SUPABASE_KEY", key);
-        initialiserSupabase();
-        showError("Configuration enregistrée.");
+    async function initialiserGIS() {
+      for (let i = 0; i < 20; i++) {
+        if (window.google?.accounts?.oauth2) break;
+        await new Promise(resolve => setTimeout(resolve, 150));
       }
-
-      async function verifierSession() {
-        if (!supabase) return;
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        mettreAJourEtatConnexion(session);
-
-        if (session) {
-          switchScreen("screen-menu");
-        }
+      if (!window.google?.accounts?.oauth2) {
+        showError("Impossible de charger Google Identity Services.");
+        return;
       }
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SHEETS_SCOPE,
+        callback: (response) => {
+          const currentMode = pendingAuthMode;
+          const resolve = pendingAuthResolve;
+          const reject = pendingAuthReject;
+          pendingAuthResolve = null;
+          pendingAuthReject = null;
+          pendingAuthMode = null;
 
-      function mettreAJourEtatConnexion(session) {
-        const status = document.getElementById("auth-status");
-        const logoutBtn = document.getElementById("btn-logout");
-
-        if (session) {
-          userName = session.user.email.split("@")[0];
-          status.innerText = `Connecté en tant que ${userName} ✅`;
-          logoutBtn.style.display = "inline-flex";
-        } else {
-          status.innerText = "Non connecté";
-          logoutBtn.style.display = "none";
-          userName = "";
-        }
-      }
-
-      async function inscriptionClassique() {
-        if (!supabase) return showError("Supabase non configuré.");
-        const email = document.getElementById("auth-email").value.trim();
-        const password = document.getElementById("auth-password").value;
-
-        if (!email || !password)
-          return showError("Remplissez email et mot de passe.");
-
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) {
-          showError(error.message);
-        } else {
-          showError("Inscription réussie, vous pouvez vous connecter.");
-        }
-      }
-
-      async function connexionClassique() {
-        if (!supabase) return showError("Supabase non configuré.");
-        const email = document.getElementById("auth-email").value.trim();
-        const password = document.getElementById("auth-password").value;
-
-        if (!email || !password)
-          return showError("Remplissez email et mot de passe.");
-
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          showError(error.message);
-        } else {
-          mettreAJourEtatConnexion(data.session);
-          switchScreen("screen-menu");
-        }
-      }
-
-      async function deconnecter() {
-        if (supabase) {
-          await supabase.auth.signOut();
-        }
-        mettreAJourEtatConnexion(null);
-        switchScreen("screen-auth");
-      }
-
-      // Authentification biométrique (Passkeys / WebAuthn) - Approche simplifiée pour démonstration
-      // Dans un projet de production réel sur Supabase, il faudrait utiliser un backend pour générer
-      // les options d'authentification WebAuthn et valider la réponse (non supporté nativement de base par @supabase/auth-js seul)
-      async function connexionBiometrique() {
-        showError(
-          "L'authentification biométrique nécessite un backend configuré avec WebAuthn. (Fonctionnalité mockée)",
-        );
-      }
-
-      function estConnecte() {
-        return userName !== "";
-      }
-
-      function normalizeKey(value = "") {
-        return value
-          .toString()
-          .trim()
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9]/g, "");
-      }
-
-      function toNumber(value) {
-        if (value === null || value === undefined) return 0;
-        let str = value
-          .toString()
-          .replace(/\s/g, "")
-          .replace(/[^\d.,-]/g, "");
-        const lastDot = str.lastIndexOf(".");
-        const lastComma = str.lastIndexOf(",");
-        if (lastComma > lastDot) {
-          str = str.replace(/\./g, "").replace(/,/g, ".");
-        } else {
-          str = str.replace(/,/g, "");
-        }
-        const parsed = Number(str);
-        return Number.isFinite(parsed) ? parsed : 0;
-      }
-
-      async function appendHistoryRow(nomCarte, action, montant) {
-        const { error } = await supabase.from("historique").insert([
-          {
-            nom_carte: nomCarte,
-            action: action,
-            montant: montant,
-            utilisateur: userName || "Utilisateur",
-            date: new Date().toISOString(),
-          },
-        ]);
-        if (error) throw error;
-      }
-
-      function isCreditAction(action) {
-        return ["ajout", "rechargement", "credit"].includes(
-          normalizeKey(action),
-        );
-      }
-
-      function isDebitAction(action) {
-        return ["depense", "debit"].includes(normalizeKey(action));
-      }
-
-      async function apiGet(action) {
-        if (action === "obtenirCartesActives") {
-          const { data, error } = await supabase
-            .from("cartes")
-            .select("*")
-            .eq("statut", true)
-            .gt("solde_restant", 0);
-          if (error) throw error;
-
-          return data.map((c) => ({
-            id: c.id,
-            nom: c.nom,
-            solde: c.solde_restant,
-            donneesCode: c.donnees_code,
-            dateValidite: c.date_validite,
-          }));
-        }
-
-        if (action === "obtenirHistorique") {
-          const { data, error } = await supabase
-            .from("historique")
-            .select("*")
-            .order("date", { ascending: false });
-          if (error) throw error;
-
-          return data.map((h) => ({
-            indexLigne: h.id,
-            nom: h.nom_carte,
-            action: h.action,
-            montant: h.montant,
-            user: h.utilisateur,
-            date: new Date(h.date).toLocaleString("fr-FR"),
-          }));
-        }
-        throw new Error(`Action GET non supportée : ${action}`);
-      }
-
-      async function apiPost(data) {
-        if (data.action === "ajouterNouvelleCarte") {
-          const montant = toNumber(data.montantInitial);
-          const nextId = "CARD_" + Date.now();
-
-          const { error: errInsert } = await supabase.from("cartes").insert([
-            {
-              id: nextId,
-              nom: data.nom,
-              montant_initial: montant,
-              solde_restant: montant,
-              donnees_code: data.donneesCode,
-              statut: true,
-              date_validite: data.dateValidite || null,
-            },
-          ]);
-          if (errInsert) throw errInsert;
-
-          await appendHistoryRow(data.nom, "Ajout", montant);
-          return "Carte ajoutée";
-        }
-
-        if (data.action === "utiliserCarte") {
-          const { data: cardList, error: errSelect } = await supabase
-            .from("cartes")
-            .select("*")
-            .eq("id", data.idCarte);
-
-          if (errSelect) throw errSelect;
-          if (!cardList || cardList.length === 0)
-            throw new Error("Carte introuvable.");
-
-          const card = cardList[0];
-          const montant = toNumber(data.montantDepense);
-          const nextSolde = toNumber(card.solde_restant) - montant;
-
-          if (nextSolde < 0) throw new Error("Le montant dépasse le solde.");
-
-          const { error: errUpdate } = await supabase
-            .from("cartes")
-            .update({
-              solde_restant: nextSolde,
-              statut: nextSolde > 0,
-            })
-            .eq("id", data.idCarte);
-
-          if (errUpdate) throw errUpdate;
-
-          await appendHistoryRow(card.nom, "Dépense", montant);
-          return "Carte mise à jour";
-        }
-
-        if (data.action === "modifierHistorique") {
-          const { data: histList, error: errSelectHist } = await supabase
-            .from("historique")
-            .select("*")
-            .eq("id", data.indexLigne);
-
-          if (errSelectHist) throw errSelectHist;
-          if (!histList || histList.length === 0)
-            throw new Error("Ligne d'historique introuvable.");
-
-          const target = histList[0];
-          const nouveauMontant = toNumber(data.nouveauMontant);
-          const ancienMontant = toNumber(target.montant);
-          const delta = nouveauMontant - ancienMontant;
-
-          const { error: errUpdateHist } = await supabase
-            .from("historique")
-            .update({ montant: nouveauMontant })
-            .eq("id", data.indexLigne);
-
-          if (errUpdateHist) throw errUpdateHist;
-
-          const { data: cardList, error: errSelectCard } = await supabase
-            .from("cartes")
-            .select("*")
-            .eq("nom", target.nom_carte);
-
-          if (!errSelectCard && cardList && cardList.length > 0) {
-            const card = cardList[0];
-            let adjustment;
-            if (isCreditAction(target.action)) adjustment = delta;
-            else if (isDebitAction(target.action)) adjustment = -delta;
-            else
-              throw new Error(
-                `Action d'historique inconnue : ${target.action}`,
-              );
-
-            const newSolde = toNumber(card.solde_restant) + adjustment;
-            await supabase
-              .from("cartes")
-              .update({
-                solde_restant: newSolde,
-                statut: newSolde > 0,
-              })
-              .eq("id", card.id);
-          }
-          return "Historique modifié";
-        }
-
-        if (data.action === "supprimerHistorique") {
-          const { data: histList, error: errSelectHist } = await supabase
-            .from("historique")
-            .select("*")
-            .eq("id", data.indexLigne);
-
-          if (errSelectHist) throw errSelectHist;
-          if (!histList || histList.length === 0)
-            throw new Error("Ligne d'historique introuvable.");
-
-          const target = histList[0];
-
-          const { data: cardList, error: errSelectCard } = await supabase
-            .from("cartes")
-            .select("*")
-            .eq("nom", target.nom_carte);
-
-          if (!errSelectCard && cardList && cardList.length > 0) {
-            const card = cardList[0];
-            let adjustment;
-            if (isCreditAction(target.action))
-              adjustment = -toNumber(target.montant);
-            else if (isDebitAction(target.action))
-              adjustment = toNumber(target.montant);
-            else
-              throw new Error(
-                `Action d'historique inconnue : ${target.action}`,
-              );
-
-            const newSolde = toNumber(card.solde_restant) + adjustment;
-            await supabase
-              .from("cartes")
-              .update({
-                solde_restant: newSolde,
-                statut: newSolde > 0,
-              })
-              .eq("id", card.id);
+          const errorMessage = response?.error_description || response?.error || "Connexion Google refusée.";
+          if (response?.error === 'popup_closed') {
+            if (reject) {
+              reject(new Error("Connexion Google annulée."));
+            }
+            return;
           }
 
-          const { error: errDelete } = await supabase
-            .from("historique")
-            .delete()
-            .eq("id", data.indexLigne);
-
-          if (errDelete) throw errDelete;
-
-          return "Historique supprimé";
-        }
-
-        throw new Error(`Action POST non supportée : ${data.action}`);
-      }
-
-      async function chargerDashboard() {
-        try {
-          const cartes = await apiGet("obtenirCartesActives");
-          const total = cartes.reduce((sum, c) => sum + Number(c.solde), 0);
-          document.getElementById("dash-total-solde").innerText =
-            total.toFixed(2) + " €";
-          document.getElementById("dash-nb-cartes").innerText =
-            `${cartes.length} carte${cartes.length > 1 ? "s" : ""} active${cartes.length > 1 ? "s" : ""}`;
-        } catch (e) {
-          document.getElementById("dash-total-solde").innerText = "-- €";
-        }
-      }
-
-      function nettoyerSaisieNumerique(champ) {
-        let valeur = champ.value.replace(/,/g, ".");
-        valeur = valeur.replace(/[^0-9.]/g, "");
-        let parties = valeur.split(".");
-        if (parties.length > 2) {
-          valeur = parties[0] + "." + parties.slice(1).join("");
-        }
-        champ.value = valeur;
-      }
-
-      function showError(message) {
-        const errorBanner = document.getElementById("global-error");
-        document.getElementById("error-text").innerText = message;
-        errorBanner.style.display = "flex";
-        if (errorTimeout) clearTimeout(errorTimeout);
-        errorTimeout = setTimeout(() => {
-          errorBanner.style.display = "none";
-        }, 4000);
-      }
-
-      function switchScreen(screenId) {
-        if (screenId !== "screen-auth" && !estConnecte()) {
-          showError("Connexion requise.");
-          screenId = "screen-auth";
-        }
-        document.getElementById("global-error").style.display = "none";
-        document
-          .querySelectorAll(".screen")
-          .forEach((s) => s.classList.remove("active"));
-        document.getElementById(screenId).classList.add("active");
-        if (screenId === "screen-menu") chargerDashboard();
-      }
-
-      function gererPleinEcranCode() {
-        const codeContainer = document.querySelector(".qr-container");
-        const requestFullScreen =
-          codeContainer.requestFullscreen ||
-          codeContainer.webkitRequestFullScreen;
-        const cancelFullScreen =
-          document.exitFullscreen || document.webkitExitFullscreen;
-
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-          if (requestFullScreen) {
-            requestFullScreen.call(codeContainer);
+          if (response?.access_token) {
+            enregistrerSessionGoogle(response.access_token, response.expires_in);
+            mettreAJourEtatConnexion();
+            if (resolve) resolve(response || {});
+            fetchGoogleUserInfo(response.access_token).then(name => {
+              if (name) {
+                userName = name;
+                localStorage.setItem(USER_FIRST_NAME_KEY, name);
+                mettreAJourEtatConnexion();
+              }
+            }).catch(err => {
+              console.error("Erreur lors de la récupération du profil utilisateur", err);
+            });
           } else {
-            showError("L'aperçu plein écran n'est pas supporté.");
+            if (reject) {
+              reject(new Error(errorMessage));
+            } else if (currentMode === 'manual') {
+              showError(errorMessage);
+            }
           }
+        }
+      });
+    }
+
+    function tokenGoogleExpire() {
+      if (!accessToken) return true;
+      if (!accessTokenExpiresAt) return true;
+      return Date.now() >= (accessTokenExpiresAt - TOKEN_EXPIRY_LEEWAY_MS);
+    }
+
+    function enregistrerSessionGoogle(token, expiresInSeconds) {
+      const ttlSeconds = Number(expiresInSeconds);
+      const safeTtlSeconds = Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? ttlSeconds : 3500;
+      accessToken = token || '';
+      accessTokenExpiresAt = Date.now() + safeTtlSeconds * 1000;
+      localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+      localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, String(accessTokenExpiresAt));
+    }
+
+    async function fetchGoogleUserInfo(token) {
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data.given_name || '';
+        }
+      } catch (err) {
+        console.error("Erreur fetch userinfo", err);
+      }
+      return '';
+    }
+
+    function effacerSessionGoogle() {
+      accessToken = '';
+      accessTokenExpiresAt = 0;
+      userName = '';
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
+      localStorage.removeItem(USER_FIRST_NAME_KEY);
+    }
+
+    function restaurerSessionGoogle() {
+      const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY) || '';
+      const storedExpiry = Number(localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY) || 0);
+      const storedName = localStorage.getItem(USER_FIRST_NAME_KEY) || '';
+      if (!storedToken || !Number.isFinite(storedExpiry)) {
+        effacerSessionGoogle();
+        return;
+      }
+      accessToken = storedToken;
+      accessTokenExpiresAt = storedExpiry;
+      userName = storedName;
+      if (tokenGoogleExpire()) {
+        effacerSessionGoogle();
+      } else if (!userName) {
+        fetchGoogleUserInfo(accessToken).then(name => {
+          if (name) {
+            userName = name;
+            localStorage.setItem(USER_FIRST_NAME_KEY, name);
+            mettreAJourEtatConnexion();
+          }
+        }).catch(err => {
+          console.error("Erreur lors de la récupération du profil utilisateur au démarrage", err);
+        });
+      }
+    }
+
+    function demanderTokenGoogle({ prompt = 'consent', mode = 'manual' } = {}) {
+      return new Promise((resolve, reject) => {
+        if (!tokenClient) {
+          reject(new Error("Google Identity Services n'est pas prêt."));
+          return;
+        }
+        pendingAuthResolve = resolve;
+        pendingAuthReject = reject;
+        pendingAuthMode = mode;
+        tokenClient.requestAccessToken({ prompt });
+      });
+    }
+
+    async function tenterConnexionGoogleSilencieuse() {
+      if (estConnecteGoogle()) return true;
+      if (!tokenClient) return false;
+      try {
+        const response = await demanderTokenGoogle({ prompt: '', mode: 'silent' });
+        return Boolean(response?.access_token);
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function demarrerConnexionGoogle() {
+      demanderTokenGoogle({ prompt: 'consent', mode: 'manual' })
+        .catch((err) => showError(err.message));
+    }
+
+    function estConnecteGoogle() {
+      if (tokenGoogleExpire()) {
+        effacerSessionGoogle();
+        return false;
+      }
+      return true;
+    }
+
+    function deconnecterGoogle() {
+      const tokenToRevoke = accessToken;
+      effacerSessionGoogle();
+      mettreAJourEtatConnexion();
+      switchScreen('screen-auth');
+      if (tokenToRevoke && window.google?.accounts?.oauth2?.revoke) {
+        google.accounts.oauth2.revoke(tokenToRevoke, () => {});
+      }
+    }
+
+    function mettreAJourEtatConnexion() {
+      const status = document.getElementById('google-auth-status');
+      const accessBtn = document.getElementById('btn-access');
+      const googleBtn = document.getElementById('btn-google-connect');
+      const logoutBtn = document.getElementById('btn-google-logout');
+      if (estConnecteGoogle()) {
+        status.innerText = userName ? `Connecté en tant que ${userName} ✅` : "Google connecté ✅";
+        accessBtn.disabled = false;
+        googleBtn.innerHTML = '<span class="material-icons">check_circle</span> Reconnecter Google';
+        logoutBtn.style.display = 'inline-flex';
+      } else {
+        status.innerText = "Google non connecté";
+        accessBtn.disabled = true;
+        googleBtn.innerHTML = '<span class="material-icons">login</span> Connexion Google';
+        logoutBtn.style.display = 'none';
+      }
+    }
+
+    function validerAccesGoogle() {
+      if (!estConnecteGoogle()) {
+        return showError("Connectez votre compte Google pour continuer.");
+      }
+      switchScreen('screen-menu');
+      chargerDashboard();
+    }
+
+    function normalizeKey(value = '') {
+      return value.toString().trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+    }
+
+    function findColumnIndex(headerRow, aliases) {
+      const normalizedAliases = aliases.map(normalizeKey);
+      return headerRow.findIndex(h => normalizedAliases.includes(normalizeKey(h)));
+    }
+
+    function colToA1(colIdx) {
+      let dividend = colIdx + 1;
+      let columnName = '';
+      while (dividend > 0) {
+        const modulo = (dividend - 1) % 26;
+        columnName = String.fromCharCode(65 + modulo) + columnName;
+        dividend = Math.floor((dividend - modulo) / 26);
+      }
+      return columnName;
+    }
+
+    function toNumber(value) {
+      if (value === null || value === undefined) return 0;
+      let str = value.toString().replace(/\s/g, '').replace(/[^\d.,-]/g, '');
+      const lastDot = str.lastIndexOf('.');
+      const lastComma = str.lastIndexOf(',');
+      if (lastComma > lastDot) {
+        str = str.replace(/\./g, '').replace(/,/g, '.');
+      } else {
+        str = str.replace(/,/g, '');
+      }
+      const parsed = Number(str);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function estActif(value) {
+      const v = normalizeKey(value || '');
+      if (!v) return true;
+      if (v === 'epuisee') return false;
+      if (v === 'active') return true;
+      return !['false', '0', 'non', 'inactive', 'inactif', 'faux'].includes(v);
+    }
+
+    function retryDelayMs(attempt) {
+      return 400 * (attempt + 1);
+    }
+
+    function attendre(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function fetchSheets(url, options = {}) {
+      if (!estConnecteGoogle()) throw new Error("Connexion Google requise.");
+      const { timeoutMs = SHEETS_REQUEST_TIMEOUT_MS, ...fetchOptions } = options;
+      const retryableStatuses = [429, 500, 502, 503, 504];
+
+      for (let attempt = 0; attempt <= SHEETS_RETRY_COUNT; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const headers = Object.assign({}, fetchOptions.headers || {}, { Authorization: 'Bearer ' + accessToken });
+          const response = await fetch(url, { ...fetchOptions, headers, signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (response.status === 401) {
+            effacerSessionGoogle();
+            mettreAJourEtatConnexion();
+            switchScreen('screen-auth');
+            throw new Error("Session Google expirée. Veuillez vous reconnecter.");
+          }
+
+          if (retryableStatuses.includes(response.status) && attempt < SHEETS_RETRY_COUNT) {
+            await attendre(retryDelayMs(attempt));
+            continue;
+          }
+
+          if (!response.ok) {
+            let detail = '';
+            const fallbackMessage = `Erreur Google Sheets (${response.status})`;
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+            try {
+              if (contentType.includes('application/json')) {
+                const errorJson = await response.json();
+                detail = errorJson?.error?.message || '';
+              } else {
+                detail = (await response.text() || '').trim();
+              }
+            } catch (_) {}
+            let message = detail || fallbackMessage;
+            if (response.status === 403) {
+              message = detail
+                ? `Accès refusé à Google Sheets (${detail})`
+                : "Accès refusé à Google Sheets. Vérifiez les autorisations OAuth et le partage du fichier.";
+            }
+            throw new Error(message);
+          }
+
+          if (response.status === 204) return {};
+          try {
+            return await response.json();
+          } catch (_) {
+            return {};
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
+          if (err?.name === 'AbortError') {
+            if (attempt < SHEETS_RETRY_COUNT) {
+              await attendre(retryDelayMs(attempt));
+              continue;
+            }
+            throw new Error("Délai dépassé lors de l'appel à Google Sheets.");
+          }
+          if (err instanceof TypeError && attempt < SHEETS_RETRY_COUNT) {
+            await attendre(retryDelayMs(attempt));
+            continue;
+          }
+          throw err instanceof Error ? err : new Error("Erreur réseau Google Sheets.");
+        }
+      }
+
+      throw new Error("Échec de communication avec Google Sheets.");
+    }
+
+    async function sheetGet(range) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}`;
+      const json = await fetchSheets(url);
+      return json.values || [];
+    }
+
+    async function sheetAppend(range, values) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}:append?valueInputOption=USER_ENTERED`;
+      return fetchSheets(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values })
+      });
+    }
+
+    async function sheetUpdate(range, values) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}?valueInputOption=USER_ENTERED`;
+      return fetchSheets(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values })
+      });
+    }
+
+    async function sheetClear(range) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodedRange}:clear`;
+      return fetchSheets(url, { method: 'POST' });
+    }
+
+    async function readCardsRaw() {
+      const rows = await sheetGet(`${CARDS_SHEET}!A1:Z`);
+      if (!rows.length) return { headers: [], items: [] };
+      const headers = rows[0];
+      const idIdx = findColumnIndex(headers, ['id', 'idcarte']);
+      const nomIdx = findColumnIndex(headers, ['nom', 'enseigne', 'magasin']);
+      const soldeIdx = findColumnIndex(headers, ['solde', 'solde restant']);
+      const codeIdx = findColumnIndex(headers, ['donneescode', 'donnees code', 'code', 'qrcode']);
+      const dateIdx = findColumnIndex(headers, ['datevalidite', 'date de validite', 'expiration']);
+      const actifIdx = findColumnIndex(headers, ['actif', 'active', 'statut']);
+      const items = rows.slice(1).map((row, idx) => {
+        const rowNumber = idx + 2;
+        return {
+          id: idIdx >= 0 ? (row[idIdx] || String(rowNumber)) : String(rowNumber),
+          nom: nomIdx >= 0 ? (row[nomIdx] || '') : '',
+          solde: soldeIdx >= 0 ? toNumber(row[soldeIdx]) : 0,
+          donneesCode: codeIdx >= 0 ? (row[codeIdx] || '') : '',
+          dateValidite: dateIdx >= 0 ? (row[dateIdx] || '') : '',
+          actif: actifIdx >= 0 ? estActif(row[actifIdx]) : true,
+          _rowNumber: rowNumber,
+          _soldeCol: soldeIdx,
+          _actifCol: actifIdx
+        };
+      }).filter(item => item.nom);
+      return { headers, items };
+    }
+
+    async function readActiveCards() {
+      const { items } = await readCardsRaw();
+      return items.filter(c => c.actif !== false && toNumber(c.solde) > 0);
+    }
+
+    async function readHistoryRaw() {
+      const rows = await sheetGet(`${HISTORY_SHEET}!A1:Z`);
+      if (!rows.length) return { headers: [], items: [] };
+      const headers = rows[0];
+      const nomIdx = findColumnIndex(headers, ['nom', 'nom carte', 'enseigne']);
+      const actionIdx = findColumnIndex(headers, ['action', 'type']);
+      const montantIdx = findColumnIndex(headers, ['montant']);
+      const userIdx = findColumnIndex(headers, ['user', 'utilisateur', 'auteur']);
+      const dateIdx = findColumnIndex(headers, ['date', 'horodatage', 'timestamp']);
+      const items = rows.slice(1).map((row, idx) => {
+        const rowNumber = idx + 2;
+        const nom = nomIdx >= 0 ? (row[nomIdx] || '') : '';
+        return {
+          indexLigne: rowNumber,
+          nom,
+          action: actionIdx >= 0 ? (row[actionIdx] || 'Dépense') : 'Dépense',
+          montant: toNumber(montantIdx >= 0 ? row[montantIdx] : 0),
+          user: userIdx >= 0 ? (row[userIdx] || 'Famille') : 'Famille',
+          date: dateIdx >= 0 ? (row[dateIdx] || '') : '',
+          _montantCol: montantIdx
+        };
+      }).filter(item => item.nom);
+      return { headers, items };
+    }
+
+    function buildRowFromHeaders(headers, valuesByAliases, fallbackOrder) {
+      const width = Math.max(headers.length, fallbackOrder.length);
+      const row = Array(width).fill('');
+      for (const [aliases, value] of valuesByAliases) {
+        let idx = findColumnIndex(headers, aliases);
+        if (idx < 0) {
+          const fallbackIdx = fallbackOrder.findIndex(fo => aliases.includes(fo));
+          idx = fallbackIdx >= 0 ? fallbackIdx : -1;
+        }
+        if (idx >= 0) row[idx] = value;
+      }
+      return row;
+    }
+
+    async function appendHistoryRow(card, action, montant) {
+      const now = new Date().toLocaleString('fr-FR');
+      let { headers } = await readHistoryRaw();
+      if (!headers.length) {
+        headers = ['Date', 'Nom Carte', 'Action', 'Montant', 'Utilisateur'];
+        await sheetUpdate(`${HISTORY_SHEET}!A1:E1`, [headers]);
+      }
+      const fallback = ['date', 'nom carte', 'action', 'montant', 'utilisateur'];
+      const row = buildRowFromHeaders(headers, [
+        [['date', 'horodatage', 'timestamp'], now],
+        [['nom carte', 'nom', 'enseigne'], card.nom],
+        [['action', 'type'], action],
+        [['montant'], Number(montant.toFixed(2))],
+        [['utilisateur', 'user', 'auteur'], userName || 'Famille']
+      ], fallback);
+      await sheetAppend(`${HISTORY_SHEET}!A:${colToA1(row.length - 1)}`, [row]);
+    }
+
+    async function updateCardSolde(card, nextSolde) {
+      if (card._soldeCol < 0) throw new Error("Colonne 'solde' introuvable.");
+      const col = colToA1(card._soldeCol);
+      await sheetUpdate(`${CARDS_SHEET}!${col}${card._rowNumber}`, [[Number(nextSolde.toFixed(2))]]);
+      if (card._actifCol >= 0) {
+        const actifCol = colToA1(card._actifCol);
+        await sheetUpdate(`${CARDS_SHEET}!${actifCol}${card._rowNumber}`, [[nextSolde > 0 ? 'TRUE' : 'FALSE']]);
+      }
+    }
+
+    function isCreditAction(action) {
+      return ['ajout', 'rechargement', 'credit'].includes(normalizeKey(action));
+    }
+
+    function isDebitAction(action) {
+      return ['depense', 'debit'].includes(normalizeKey(action));
+    }
+
+    async function apiGet(action) {
+      if (action === 'obtenirCartesActives') {
+        return readActiveCards();
+      }
+      if (action === 'obtenirHistorique') {
+        const { items } = await readHistoryRaw();
+        return items.slice().reverse();
+      }
+      throw new Error(`Action GET non supportée : ${action}`);
+    }
+
+    async function apiPost(data) {
+      if (data.action === 'ajouterNouvelleCarte') {
+        let { headers, items } = await readCardsRaw();
+        if (!headers.length) {
+          headers = ['ID', 'Nom', 'Montant initial', 'Solde Restant', 'Donnees Code', 'Statut', 'Date de validité'];
+          await sheetUpdate(`${CARDS_SHEET}!A1:G1`, [headers]);
+          items = [];
+        }
+        const nextId = (items.reduce((maxId, c) => Math.max(maxId, Number(c.id) || 0), 0) + 1).toString();
+        const montant = toNumber(data.montantInitial);
+        const fallback = ['id', 'nom', 'montantinitial', 'solderestant', 'donneescode', 'statut', 'datedevalidite'];
+        const row = buildRowFromHeaders(headers, [
+          [['id', 'idcarte'], nextId],
+          [['nom', 'enseigne', 'magasin'], data.nom],
+          [['montantinitial', 'montant initial'], Number(montant.toFixed(2))],
+          [['solderestant', 'solde', 'solde restant'], Number(montant.toFixed(2))],
+          [['donneescode', 'code', 'qrcode', 'donnees code'], data.donneesCode],
+          [['statut', 'actif', 'active'], 'TRUE'],
+          [['datedevalidite', 'datevalidite', 'expiration', 'date de validite'], data.dateValidite || '']
+        ], fallback);
+        await sheetAppend(`${CARDS_SHEET}!A:${colToA1(row.length - 1)}`, [row]);
+        await appendHistoryRow({ id: nextId, nom: data.nom }, 'Ajout', montant);
+        return 'Carte ajoutée';
+      }
+
+      if (data.action === 'utiliserCarte') {
+        const { items } = await readCardsRaw();
+        const card = items.find(c => String(c.id) === String(data.idCarte)) || items.find(c => String(c._rowNumber) === String(data.idCarte));
+        if (!card) throw new Error("Carte introuvable.");
+        const montant = toNumber(data.montantDepense);
+        const nextSolde = toNumber(card.solde) - montant;
+        if (nextSolde < 0) throw new Error("Le montant dépasse le solde.");
+        await updateCardSolde(card, nextSolde);
+        await appendHistoryRow(card, 'Dépense', montant);
+        return 'Carte mise à jour';
+      }
+
+      if (data.action === 'modifierHistorique') {
+        const { items: historyItems } = await readHistoryRaw();
+        const target = historyItems.find(h => Number(h.indexLigne) === Number(data.indexLigne));
+        if (!target) throw new Error("Ligne d'historique introuvable.");
+        if (target._montantCol < 0) throw new Error("Colonne 'montant' introuvable.");
+        const nouveauMontant = toNumber(data.nouveauMontant);
+        const ancienMontant = toNumber(target.montant);
+        const delta = nouveauMontant - ancienMontant;
+        const montantCol = colToA1(target._montantCol);
+        await sheetUpdate(`${HISTORY_SHEET}!${montantCol}${target.indexLigne}`, [[Number(nouveauMontant.toFixed(2))]]);
+
+        const { items: cards } = await readCardsRaw();
+        const card = cards.find(c => c.nom === target.nom);
+        if (card) {
+          let adjustment;
+          if (isCreditAction(target.action)) adjustment = delta;
+          else if (isDebitAction(target.action)) adjustment = -delta;
+          else throw new Error(`Action d'historique inconnue : ${target.action}`);
+          await updateCardSolde(card, toNumber(card.solde) + adjustment);
+        }
+        return 'Historique modifié';
+      }
+
+      if (data.action === 'supprimerHistorique') {
+        const { items: historyItems } = await readHistoryRaw();
+        const target = historyItems.find(h => Number(h.indexLigne) === Number(data.indexLigne));
+        if (!target) throw new Error("Ligne d'historique introuvable.");
+
+        const { items: cards } = await readCardsRaw();
+        const card = cards.find(c => c.nom === target.nom);
+        if (card) {
+          let adjustment;
+          if (isCreditAction(target.action)) adjustment = -toNumber(target.montant);
+          else if (isDebitAction(target.action)) adjustment = toNumber(target.montant);
+          else throw new Error(`Action d'historique inconnue : ${target.action}`);
+          await updateCardSolde(card, toNumber(card.solde) + adjustment);
+        }
+        await sheetClear(`${HISTORY_SHEET}!A${target.indexLigne}:Z${target.indexLigne}`);
+        return 'Historique supprimé';
+      }
+
+      throw new Error(`Action POST non supportée : ${data.action}`);
+    }
+
+    async function chargerDashboard() {
+      try {
+        const cartes = await apiGet('obtenirCartesActives');
+        const total = cartes.reduce((sum, c) => sum + Number(c.solde), 0);
+        document.getElementById('dash-total-solde').innerText = total.toFixed(2) + ' €';
+        document.getElementById('dash-nb-cartes').innerText = `${cartes.length} carte${cartes.length > 1 ? 's' : ''} active${cartes.length > 1 ? 's' : ''}`;
+      } catch (e) {
+        document.getElementById('dash-total-solde').innerText = '-- €';
+      }
+    }
+
+    function nettoyerSaisieNumerique(champ) {
+      let valeur = champ.value.replace(/,/g, '.');
+      valeur = valeur.replace(/[^0-9.]/g, '');
+      let parties = valeur.split('.');
+      if (parties.length > 2) {
+        valeur = parties[0] + '.' + parties.slice(1).join('');
+      }
+      champ.value = valeur;
+    }
+
+    function showError(message) {
+      const errorBanner = document.getElementById('global-error');
+      document.getElementById('error-text').innerText = message;
+      errorBanner.style.display = 'flex';
+      if(errorTimeout) clearTimeout(errorTimeout);
+      errorTimeout = setTimeout(() => { errorBanner.style.display = 'none'; }, 4000);
+      
+    }
+
+    function switchScreen(screenId) {
+      if (screenId !== 'screen-auth' && !estConnecteGoogle()) {
+        showError("Connexion Google requise.");
+        screenId = 'screen-auth';
+      }
+      document.getElementById('global-error').style.display = 'none';
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      if (screenId === 'screen-menu') chargerDashboard();
+    }
+
+    function gererPleinEcranCode() {
+      const codeContainer = document.querySelector('.qr-container');
+      const requestFullScreen = codeContainer.requestFullscreen || codeContainer.webkitRequestFullScreen;
+      const cancelFullScreen = document.exitFullscreen || document.webkitExitFullscreen;
+
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (requestFullScreen) {
+          requestFullScreen.call(codeContainer);
         } else {
-          if (cancelFullScreen) {
-            cancelFullScreen.call(document);
-          }
+          showError("L'aperçu plein écran n'est pas supporté.");
+        }
+      } else {
+        if (cancelFullScreen) {
+          cancelFullScreen.call(document);
         }
       }
+    }
 
-      function analyserPhoto(event) {
-        if (event.target.files.length === 0) return;
-        const fichier = event.target.files[0];
-        const inputTexte = document.getElementById("add-code");
-        const ancienTexte = inputTexte.value;
-        inputTexte.value = "Analyse en cours...";
+    function analyserPhoto(event) {
+      if (event.target.files.length === 0) return;
+      const fichier = event.target.files[0];
+      const inputTexte = document.getElementById('add-code');
+      const ancienTexte = inputTexte.value;
+      inputTexte.value = "Analyse en cours...";
 
-        const html5QrCode = new Html5Qrcode("reader");
+      const html5QrCode = new Html5Qrcode("reader");
+      
+      html5QrCode.scanFile(fichier, true)
+        .then(decodedText => { inputTexte.value = decodedText; })
+        .catch(err => {
+          inputTexte.value = ancienTexte;
+          showError("Oups ! Aucun code lisible trouvé sur cette image.");
+        });
+      event.target.value = ''; 
+    }
 
-        html5QrCode
-          .scanFile(fichier, true)
-          .then((decodedText) => {
-            inputTexte.value = decodedText;
-          })
-          .catch((err) => {
-            inputTexte.value = ancienTexte;
-            showError("Oups ! Aucun code lisible trouvé sur cette image.");
-          });
-        event.target.value = "";
+    async function saveNewCard() {
+      const nom = document.getElementById('add-nom').value.trim();
+      const montant = document.getElementById('add-montant').value;
+      const code = document.getElementById('add-code').value.trim();
+      const dateValidite = document.getElementById('add-date').value;
+
+      if(!nom || !montant || !code || code === "Analyse en cours...") {
+        return showError("Veuillez remplir tous les champs obligatoires.");
       }
 
-      async function saveNewCard() {
-        const nom = document.getElementById("add-nom").value.trim();
-        const montant = document.getElementById("add-montant").value;
-        const code = document.getElementById("add-code").value.trim();
-        const dateValidite = document.getElementById("add-date").value;
+      const btnSave = document.getElementById('btn-save-card');
+      const btnBack = document.getElementById('btn-back-card');
+      btnSave.disabled = true;
+      btnBack.disabled = true;
+      btnSave.innerHTML = '<span class="material-icons">sync</span> Enregistrement...';
 
-        if (!nom || !montant || !code || code === "Analyse en cours...") {
-          return showError("Veuillez remplir tous les champs obligatoires.");
-        }
+      try {
+        await apiPost({
+          action: 'ajouterNouvelleCarte',
+          nom: nom,
+          montantInitial: montant,
+          donneesCode: code,
+          dateValidite: dateValidite
+        });
 
-        const btnSave = document.getElementById("btn-save-card");
-        const btnBack = document.getElementById("btn-back-card");
-        btnSave.disabled = true;
-        btnBack.disabled = true;
-        btnSave.innerHTML =
-          '<span class="material-icons">sync</span> Enregistrement...';
-
-        try {
-          await apiPost({
-            action: "ajouterNouvelleCarte",
-            nom: nom,
-            montantInitial: montant,
-            donneesCode: code,
-            dateValidite: dateValidite,
-          });
-
-          btnSave.disabled = false;
-          btnBack.disabled = false;
-          btnSave.innerHTML =
-            '<span class="material-icons">save</span> Enregistrer la carte';
-          document.getElementById("add-form-content").style.display = "none";
-          const successBanner = document.getElementById("add-success");
-          successBanner.style.display = "flex";
-
-          document.getElementById("add-nom").value = "";
-          document.getElementById("add-montant").value = "";
-          document.getElementById("add-code").value = "";
-          document.getElementById("add-date").value = "";
-
-          setTimeout(() => {
-            successBanner.style.display = "none";
-            document.getElementById("add-form-content").style.display = "flex";
-            switchScreen("screen-menu");
-          }, 1500);
-        } catch (err) {
-          showError("Erreur : " + err.message);
-          btnSave.disabled = false;
-          btnBack.disabled = false;
-          btnSave.innerHTML =
-            '<span class="material-icons">save</span> Enregistrer la carte';
-        }
+        btnSave.disabled = false;
+        btnBack.disabled = false;
+        btnSave.innerHTML = '<span class="material-icons">save</span> Enregistrer la carte';
+        document.getElementById('add-form-content').style.display = 'none';
+        const successBanner = document.getElementById('add-success');
+        successBanner.style.display = 'flex';
+        
+        document.getElementById('add-nom').value = '';
+        document.getElementById('add-montant').value = '';
+        document.getElementById('add-code').value = '';
+        document.getElementById('add-date').value = '';
+        
+        setTimeout(() => {
+          successBanner.style.display = 'none';
+          document.getElementById('add-form-content').style.display = 'flex';
+          switchScreen('screen-menu');
+        }, 1500);
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        btnSave.disabled = false;
+        btnBack.disabled = false;
+        btnSave.innerHTML = '<span class="material-icons">save</span> Enregistrer la carte';
       }
+    }
 
-      async function openUseScreen() {
-        switchScreen("screen-use-list");
-        document.getElementById("list-cartes-container").innerHTML =
-          '<div class="loading">Recherche des cartes actives...</div>';
-
-        try {
-          const cartes = await apiGet("obtenirCartesActives");
-          renderCartes(cartes);
-        } catch (err) {
-          showError("Erreur : " + err.message);
-          document.getElementById("list-cartes-container").innerHTML =
-            '<p style="text-align:center; padding:20px; color:var(--danger);">Impossible de charger la liste.</p>';
-        }
+    async function openUseScreen() {
+      switchScreen('screen-use-list');
+      document.getElementById('list-cartes-container').innerHTML = '<div class="loading">Recherche des cartes actives...</div>';
+      
+      try {
+        const cartes = await apiGet('obtenirCartesActives');
+        renderCartes(cartes);
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        document.getElementById('list-cartes-container').innerHTML = '<p style="text-align:center; padding:20px; color:var(--danger);">Impossible de charger la liste.</p>';
       }
+    }
 
-      function renderCartes(cartes) {
-        const container = document.getElementById("list-cartes-container");
-        container.innerHTML = cartes.length
-          ? ""
-          : '<p style="text-align:center; padding:20px;">Aucune carte active disponible.</p>';
-
-        cartes.forEach((c) => {
-          const dateText = c.dateValidite
-            ? `<br><span style="color:var(--danger); font-size:0.8rem; font-weight:normal;">⌛ Expire le : ${c.dateValidite}</span>`
-            : "";
-          const div = document.createElement("div");
-          div.className = "card-item";
-          div.innerHTML = `
+    function renderCartes(cartes) {
+      const container = document.getElementById('list-cartes-container');
+      container.innerHTML = cartes.length ? '' : '<p style="text-align:center; padding:20px;">Aucune carte active disponible.</p>';
+      
+      cartes.forEach(c => {
+        const dateText = c.dateValidite ? `<br><span style="color:var(--danger); font-size:0.8rem; font-weight:normal;">⌛ Expire le : ${c.dateValidite}</span>` : '';
+        const div = document.createElement('div');
+        div.className = 'card-item';
+        div.innerHTML = `
           <div class="card-info">
             <h3>${c.nom}</h3>
             <p>Solde : <strong>${c.solde}€</strong>${dateText}</p>
           </div>
           <button class="btn-select" onclick='selectCard(${JSON.stringify(c)})'>Utiliser</button>
         `;
-          container.appendChild(div);
+        container.appendChild(div);
+      });
+    }
+
+    function selectCard(c) {
+      currentCard = c;
+      switchScreen('screen-use-action');
+      document.getElementById('action-title').innerText = c.nom;
+      document.getElementById('action-solde').innerText = c.solde;
+      document.getElementById('use-montant').value = '';
+
+      const labelValidite = document.getElementById('action-validite');
+      if(c.dateValidite) {
+        labelValidite.innerHTML = `⌛ Expire le : <strong>${c.dateValidite}</strong>`;
+        labelValidite.style.display = 'block';
+      } else {
+        labelValidite.style.display = 'none';
+      }
+
+      modeAffichageCode = 'QR';
+      document.getElementById('qr-code-element').style.display = 'inline-block';
+      document.getElementById('barcode-element').style.display = 'none';
+      document.getElementById('btn-toggle-view').innerHTML = '<span class="material-icons">barcode_reader</span> Afficher en Code-barres';
+
+      const elQr = document.getElementById('qr-code-element');
+      elQr.innerHTML = ''; 
+      new QRCode(elQr, {
+        text: c.donneesCode,
+        width: 190,
+        height: 190,
+        correctLevel : QRCode.CorrectLevel.M 
+      });
+
+      try {
+        JsBarcode("#barcode-element", c.donneesCode, {
+          format: "CODE128",
+          width: 2,
+          height: 75,
+          displayValue: true, 
+          fontSize: 13,
+          margin: 10,
+          background: "#ffffff"
         });
+      } catch (e) {
+        console.warn("Impossible de générer le code-barres :", e);
       }
+    }
 
-      function selectCard(c) {
-        currentCard = c;
-        switchScreen("screen-use-action");
-        document.getElementById("action-title").innerText = c.nom;
-        document.getElementById("action-solde").innerText = c.solde;
-        document.getElementById("use-montant").value = "";
+    function basculerFormatCode() {
+      const btn = document.getElementById('btn-toggle-view');
+      if (modeAffichageCode === 'QR') {
+        modeAffichageCode = 'BARCODE';
+        document.getElementById('qr-code-element').style.display = 'none';
+        document.getElementById('barcode-element').style.display = 'inline-block';
+        btn.innerHTML = '<span class="material-icons">qr_code_2</span> Afficher en QR Code';
+      } else {
+        modeAffichageCode = 'QR';
+        document.getElementById('qr-code-element').style.display = 'inline-block';
+        document.getElementById('barcode-element').style.display = 'none';
+        btn.innerHTML = '<span class="material-icons">barcode_reader</span> Afficher en Code-barres';
+      }
+    }
 
-        const labelValidite = document.getElementById("action-validite");
-        if (c.dateValidite) {
-          labelValidite.innerHTML = `⌛ Expire le : <strong>${c.dateValidite}</strong>`;
-          labelValidite.style.display = "block";
-        } else {
-          labelValidite.style.display = "none";
-        }
+    async function confirmSpend() {
+      const val = document.getElementById('use-montant').value;
+      if(!val || val <= 0) return showError("Indiquez un montant valide pour la dépense.");
+      if(Number(val) > Number(currentCard.solde)) return showError("Le montant saisi dépasse le solde disponible !");
 
-        modeAffichageCode = "QR";
-        document.getElementById("qr-code-element").style.display =
-          "inline-block";
-        document.getElementById("barcode-element").style.display = "none";
-        document.getElementById("btn-toggle-view").innerHTML =
-          '<span class="material-icons">barcode_reader</span> Afficher en Code-barres';
+      const btnSpend = document.getElementById('btn-confirm-spend');
+      const btnBackSpend = document.getElementById('btn-back-spend');
+      btnSpend.disabled = true;
+      btnBackSpend.disabled = true;
+      btnSpend.innerHTML = '<span class="material-icons">sync</span> Mise à jour...';
 
-        const elQr = document.getElementById("qr-code-element");
-        elQr.innerHTML = "";
-        new QRCode(elQr, {
-          text: c.donneesCode,
-          width: 190,
-          height: 190,
-          correctLevel: QRCode.CorrectLevel.M,
+      try {
+        await apiPost({
+          action: 'utiliserCarte',
+          idCarte: currentCard.id,
+          montantDepense: val
         });
 
-        try {
-          JsBarcode("#barcode-element", c.donneesCode, {
-            format: "CODE128",
-            width: 2,
-            height: 75,
-            displayValue: true,
-            fontSize: 13,
-            margin: 10,
-            background: "#ffffff",
-          });
-        } catch (e) {
-          console.warn("Impossible de générer le code-barres :", e);
-        }
+        btnSpend.disabled = false;
+        btnBackSpend.disabled = false;
+        btnSpend.innerHTML = '<span class="material-icons">done_all</span> Valider la dépense';
+        document.getElementById('use-form-content').style.display = 'none';
+        const successBanner = document.getElementById('use-success');
+        successBanner.style.display = 'flex';
+
+        setTimeout(() => {
+          successBanner.style.display = 'none';
+          document.getElementById('use-form-content').style.display = 'flex';
+          openUseScreen();
+        }, 1500);
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        btnSpend.disabled = false;
+        btnBackSpend.disabled = false;
+        btnSpend.innerHTML = '<span class="material-icons">done_all</span> Valider la dépense';
       }
+    }
 
-      function basculerFormatCode() {
-        const btn = document.getElementById("btn-toggle-view");
-        if (modeAffichageCode === "QR") {
-          modeAffichageCode = "BARCODE";
-          document.getElementById("qr-code-element").style.display = "none";
-          document.getElementById("barcode-element").style.display =
-            "inline-block";
-          btn.innerHTML =
-            '<span class="material-icons">qr_code_2</span> Afficher en QR Code';
-        } else {
-          modeAffichageCode = "QR";
-          document.getElementById("qr-code-element").style.display =
-            "inline-block";
-          document.getElementById("barcode-element").style.display = "none";
-          btn.innerHTML =
-            '<span class="material-icons">barcode_reader</span> Afficher en Code-barres';
-        }
+    async function openHistoryScreen() {
+      switchScreen('screen-history');
+      document.getElementById('history-container').innerHTML = '<div class="loading">Chargement des données...</div>';
+      try {
+        const history = await apiGet('obtenirHistorique');
+        renderHistory(history);
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        document.getElementById('history-container').innerHTML = '<p style="text-align:center; padding:20px; color:var(--danger);">Impossible de charger l\'historique.</p>';
       }
+    }
 
-      async function confirmSpend() {
-        const val = document.getElementById("use-montant").value;
-        if (!val || val <= 0)
-          return showError("Indiquez un montant valide pour la dépense.");
-        if (Number(val) > Number(currentCard.solde))
-          return showError("Le montant saisi dépasse le solde disponible !");
-
-        const btnSpend = document.getElementById("btn-confirm-spend");
-        const btnBackSpend = document.getElementById("btn-back-spend");
-        btnSpend.disabled = true;
-        btnBackSpend.disabled = true;
-        btnSpend.innerHTML =
-          '<span class="material-icons">sync</span> Mise à jour...';
-
-        try {
-          await apiPost({
-            action: "utiliserCarte",
-            idCarte: currentCard.id,
-            montantDepense: val,
-          });
-
-          btnSpend.disabled = false;
-          btnBackSpend.disabled = false;
-          btnSpend.innerHTML =
-            '<span class="material-icons">done_all</span> Valider la dépense';
-          document.getElementById("use-form-content").style.display = "none";
-          const successBanner = document.getElementById("use-success");
-          successBanner.style.display = "flex";
-
-          setTimeout(() => {
-            successBanner.style.display = "none";
-            document.getElementById("use-form-content").style.display = "flex";
-            openUseScreen();
-          }, 1500);
-        } catch (err) {
-          showError("Erreur : " + err.message);
-          btnSpend.disabled = false;
-          btnBackSpend.disabled = false;
-          btnSpend.innerHTML =
-            '<span class="material-icons">done_all</span> Valider la dépense';
-        }
-      }
-
-      async function openHistoryScreen() {
-        switchScreen("screen-history");
-        document.getElementById("history-container").innerHTML =
-          '<div class="loading">Chargement des données...</div>';
-        try {
-          const history = await apiGet("obtenirHistorique");
-          renderHistory(history);
-        } catch (err) {
-          showError("Erreur : " + err.message);
-          document.getElementById("history-container").innerHTML =
-            '<p style="text-align:center; padding:20px; color:var(--danger);">Impossible de charger l\'historique.</p>';
-        }
-      }
-
-      function renderHistory(data) {
-        const container = document.getElementById("history-container");
-        container.innerHTML = data.length
-          ? ""
-          : '<p style="text-align:center; padding:20px;">Aucune action dans l\'historique.</p>';
-        data.forEach((h) => {
-          const cl = h.action === "Ajout" ? "plus" : "moins";
-          const sym = h.action === "Ajout" ? "+" : "-";
-          const div = document.createElement("div");
-          div.className = "hist-item";
-          div.innerHTML = `
+    function renderHistory(data) {
+      const container = document.getElementById('history-container');
+      container.innerHTML = data.length ? '' : '<p style="text-align:center; padding:20px;">Aucune action dans l\'historique.</p>';
+      data.forEach(h => {
+        const cl = h.action === 'Ajout' ? 'plus' : 'moins';
+        const sym = h.action === 'Ajout' ? '+' : '-';
+        const div = document.createElement('div');
+        div.className = 'hist-item';
+        div.innerHTML = `
           <div class="hist-details">
             <div class="hist-header">
               <span>${h.nom} (${h.action})</span>
@@ -1653,86 +1329,75 @@
             <span class="material-icons">edit</span>
           </button>
         `;
-          container.appendChild(div);
+        container.appendChild(div);
+      });
+    }
+
+    function ouvrirModalEdit(indexLigne, nom, montantActuel) {
+      currentEditIndex = indexLigne;
+      document.getElementById('modal-desc').innerText = `Opération : ${nom}`;
+      document.getElementById('edit-montant-input').value = montantActuel;
+      document.getElementById('modal-edit').style.display = 'flex';
+    }
+
+    function fermerModalEdit() {
+      document.getElementById('modal-edit').style.display = 'none';
+      currentEditIndex = null;
+    }
+
+    async function sauvegarderModificationHistorique() {
+      const nouveauMontant = document.getElementById('edit-montant-input').value;
+      if (!nouveauMontant || nouveauMontant <= 0) {
+        return showError("Veuillez saisir un montant valide.");
+      }
+
+      const btnSave = document.getElementById('btn-save-edit');
+      btnSave.disabled = true;
+      btnSave.innerHTML = '<span class="material-icons">sync</span> Enregistrement...';
+
+      try {
+        await apiPost({
+          action: 'modifierHistorique',
+          indexLigne: currentEditIndex,
+          nouveauMontant: nouveauMontant
         });
+
+        btnSave.disabled = false;
+        btnSave.innerHTML = '<span class="material-icons">check</span> Enregistrer';
+        fermerModalEdit();
+        openHistoryScreen();
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        btnSave.disabled = false;
+        btnSave.innerHTML = '<span class="material-icons">check</span> Enregistrer';
+      }
+    }
+
+    async function supprimerEnregistrementHistorique() {
+      if (!confirm("Voulez-vous vraiment supprimer cet enregistrement ? Le solde de la carte sera automatiquement ajusté.")) {
+        return;
       }
 
-      function ouvrirModalEdit(indexLigne, nom, montantActuel) {
-        currentEditIndex = indexLigne;
-        document.getElementById("modal-desc").innerText = `Opération : ${nom}`;
-        document.getElementById("edit-montant-input").value = montantActuel;
-        document.getElementById("modal-edit").style.display = "flex";
+      const btnDelete = document.getElementById('btn-delete-edit');
+      btnDelete.disabled = true;
+      btnDelete.innerHTML = '<span class="material-icons">sync</span> Suppression...';
+
+      try {
+        await apiPost({
+          action: 'supprimerHistorique',
+          indexLigne: currentEditIndex
+        });
+
+        btnDelete.disabled = false;
+        btnDelete.innerHTML = '<span class="material-icons">delete</span> Supprimer cette ligne';
+        fermerModalEdit();
+        openHistoryScreen();
+      } catch(err) {
+        showError("Erreur : " + err.message);
+        btnDelete.disabled = false;
+        btnDelete.innerHTML = '<span class="material-icons">delete</span> Supprimer cette ligne';
       }
-
-      function fermerModalEdit() {
-        document.getElementById("modal-edit").style.display = "none";
-        currentEditIndex = null;
-      }
-
-      async function sauvegarderModificationHistorique() {
-        const nouveauMontant =
-          document.getElementById("edit-montant-input").value;
-        if (!nouveauMontant || nouveauMontant <= 0) {
-          return showError("Veuillez saisir un montant valide.");
-        }
-
-        const btnSave = document.getElementById("btn-save-edit");
-        btnSave.disabled = true;
-        btnSave.innerHTML =
-          '<span class="material-icons">sync</span> Enregistrement...';
-
-        try {
-          await apiPost({
-            action: "modifierHistorique",
-            indexLigne: currentEditIndex,
-            nouveauMontant: nouveauMontant,
-          });
-
-          btnSave.disabled = false;
-          btnSave.innerHTML =
-            '<span class="material-icons">check</span> Enregistrer';
-          fermerModalEdit();
-          openHistoryScreen();
-        } catch (err) {
-          showError("Erreur : " + err.message);
-          btnSave.disabled = false;
-          btnSave.innerHTML =
-            '<span class="material-icons">check</span> Enregistrer';
-        }
-      }
-
-      async function supprimerEnregistrementHistorique() {
-        if (
-          !confirm(
-            "Voulez-vous vraiment supprimer cet enregistrement ? Le solde de la carte sera automatiquement ajusté.",
-          )
-        ) {
-          return;
-        }
-
-        const btnDelete = document.getElementById("btn-delete-edit");
-        btnDelete.disabled = true;
-        btnDelete.innerHTML =
-          '<span class="material-icons">sync</span> Suppression...';
-
-        try {
-          await apiPost({
-            action: "supprimerHistorique",
-            indexLigne: currentEditIndex,
-          });
-
-          btnDelete.disabled = false;
-          btnDelete.innerHTML =
-            '<span class="material-icons">delete</span> Supprimer cette ligne';
-          fermerModalEdit();
-          openHistoryScreen();
-        } catch (err) {
-          showError("Erreur : " + err.message);
-          btnDelete.disabled = false;
-          btnDelete.innerHTML =
-            '<span class="material-icons">delete</span> Supprimer cette ligne';
-        }
-      }
-    </script>
-  </body>
+    }
+  </script>
+</body>
 </html>
