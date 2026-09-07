@@ -398,8 +398,8 @@
 
     .card-header {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      justify-content: center;
+      align-items: center;
     }
 
     /* Pastille blanche d'isolation du logo */
@@ -430,12 +430,12 @@
       font-size: 1.15rem;
       letter-spacing: -0.3px;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-      margin-top: 4px;
     }
 
     .card-footer {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      align-items: flex-end;
     }
 
     .card-expiry {
@@ -1299,10 +1299,10 @@
         amount.textContent = `${c.solde} €`;
 
         cardHeader.appendChild(logoBadge);
-        cardHeader.appendChild(amount);
 
         const cardFooter = document.createElement('div');
         cardFooter.className = 'card-footer';
+        cardFooter.appendChild(amount);
 
         if (expText) {
           const exp = document.createElement('span');
