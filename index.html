@@ -654,6 +654,7 @@
         userName = session.user.user_metadata?.first_name || session.user.email.split('@')[0];
         currentUserEmail = session.user.email;
         mettreAJourEtatConnexion();
+        chargerEnseignes();
         switchScreen('screen-menu');
       } else {
         mettreAJourEtatConnexion();
@@ -885,6 +886,7 @@
       userName = data.session.user.user_metadata?.first_name || data.session.user.email.split('@')[0];
       localStorage.setItem('app_cartes_user_first_name', userName);
       mettreAJourEtatConnexion();
+      chargerEnseignes();
       switchScreen('screen-menu');
     }
 
