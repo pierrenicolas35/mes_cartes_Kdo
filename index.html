@@ -47,6 +47,90 @@
       align-items: center;
     }
 
+    
+    .card-item {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 380px;
+      aspect-ratio: 1.586; /* Credit card ratio */
+      border-radius: 16px;
+      background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+      color: white;
+      padding: 20px;
+      margin: 0 auto 15px auto;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+      border: none;
+    }
+    
+    .card-item:hover {
+      transform: translateY(-3px);
+    }
+
+    .card-item::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .card-logo {
+      height: 40px;
+      max-width: 120px;
+      object-fit: contain;
+      align-self: flex-end;
+      background-color: rgba(255,255,255,0.9);
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
+    .card-info h3 {
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin-bottom: 5px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .card-solde {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .card-validite {
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Remove old styles for .btn-select inside .card-item since whole card is clickable now */
+    /* Keep .btn-select for backward compatibility if used elsewhere, but not in card-item */
+
     .app-container {
       width: 100%;
       max-width: 480px;
@@ -361,7 +445,8 @@
         <div class="screen-content" id="add-form-content">
           <div class="form-group" style="margin-top:5px;">
             <label>Enseigne / Magasin</label>
-            <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon...">
+            <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon..." list="enseignes-list">
+            <datalist id="enseignes-list"></datalist>
           </div>
           <div class="form-group">
             <label>Montant Initial (€)</label>
@@ -483,6 +568,7 @@
     const supabaseKey = 'sb_publishable_rlgOvnuIPqfU_Mt3nkoC2g_TOwBgPV4';
     const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
     let userName = localStorage.getItem('app_cartes_user_first_name') || '';
+    let listEnseignes = [];
     let currentUserEmail = '';
     let errorTimeout = null;
 
@@ -506,11 +592,12 @@
     }
 
     async function readCardsRaw() {
-      const { data, error } = await supabaseClient.from('cartes').select('*');
+      const { data, error } = await supabaseClient.from('cartes').select('*, enseignes(logo_url)');
       if (error) throw error;
       const items = data.map(c => ({
         id: c.id,
         nom: c.nom,
+        logo_url: c.enseignes ? c.enseignes.logo_url : null,
         solde: c.solde_restant,
         donneesCode: c.donnees_code,
         dateValidite: c.date_validite,
@@ -601,15 +688,20 @@
 
         const nextId = 'carte_' + Date.now() + '_' + Math.floor(Math.random()*1000);
 
+        const enseigneMatch = listEnseignes.find(e => e.nom.toLowerCase() === data.nom.toLowerCase());
+        const enseigne_id = enseigneMatch ? enseigneMatch.id : null;
+
         const newCard = {
           id: nextId,
           nom: data.nom,
+          enseigne_id: enseigne_id,
           montant_initial: Number(montant.toFixed(2)),
           solde_restant: Number(montant.toFixed(2)),
           donnees_code: codeValue,
           statut: true,
           date_validite: data.dateValidite || null
         };
+
         const { data: insertedCard, error } = await supabaseClient.from('cartes').insert([newCard]).select().single();
         if (error) throw error;
 
@@ -773,6 +865,21 @@
       });
     }
 
+    
+    async function chargerEnseignes() {
+      try {
+        const { data, error } = await supabaseClient.from('enseignes').select('*').order('nom');
+        if (error) throw error;
+        listEnseignes = data || [];
+        const datalist = document.getElementById('enseignes-list');
+        if (datalist) {
+          datalist.innerHTML = listEnseignes.map(e => `<option value="${e.nom}">`).join('');
+        }
+      } catch (e) {
+        console.error("Erreur chargement enseignes:", e);
+      }
+    }
+
     function showError(message) {
       const errorBanner = document.getElementById('global-error');
       document.getElementById('error-text').innerText = message;
@@ -837,6 +944,7 @@
         await apiPost({
           action: 'ajouterNouvelleCarte',
           nom: nom,
+        
           montantInitial: montant,
           donneesCode: code,
           dateValidite: dateValidite
@@ -880,24 +988,33 @@
       }
     }
 
+    
     function renderCartes(cartes) {
       const container = document.getElementById('list-cartes-container');
       container.innerHTML = cartes.length ? '' : '<p style="text-align:center; padding:20px;">Aucune carte active disponible.</p>';
       
       cartes.forEach(c => {
-        const dateText = c.dateValidite ? `<br><span style="color:var(--danger); font-size:0.8rem; font-weight:normal;">⌛ Expire le : ${c.dateValidite}</span>` : '';
+        const logoHtml = c.logo_url ? `<img src="${c.logo_url}" class="card-logo" alt="${c.nom}">` : `<div class="card-logo" style="background:transparent; padding:0;"></div>`;
+        const dateText = c.dateValidite ? `EXP ${c.dateValidite}` : '';
+        
         const div = document.createElement('div');
         div.className = 'card-item';
+        div.onclick = () => selectCard(c);
+        
         div.innerHTML = `
+          ${logoHtml}
           <div class="card-info">
             <h3>${c.nom}</h3>
-            <p>Solde : <strong>${c.solde}€</strong>${dateText}</p>
+            <div class="card-solde">${c.solde} €</div>
+            <div class="card-footer">
+              <span class="card-validite">${dateText}</span>
+            </div>
           </div>
-          <button class="btn-select" onclick='selectCard(${JSON.stringify(c)})'>Utiliser</button>
         `;
         container.appendChild(div);
       });
     }
+
 
     function selectCard(c) {
       currentCard = c;
