@@ -375,72 +375,75 @@
       align-content: start;
     }
 
-    .cc-card {
+    .gift-card {
       position: relative;
-      aspect-ratio: 1.586;
-      border-radius: 12px;
-      background-color: #fff;
-      border: 1px solid #ccc;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      overflow: hidden;
-      cursor: pointer;
+      border-radius: 16px;
+      padding: 14px 16px;
+      min-height: 105px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      color: #333;
-      transition: transform 0.2s, box-shadow 0.2s;
+      border: none;
+      background: linear-gradient(135deg, #243342, #141c24); /* Fond de repli par défaut */
+      color: #ffffff;
+      box-shadow: 0 8px 18px -4px rgba(0, 0, 0, 0.25), 0 2px 6px -1px rgba(0, 0, 0, 0.12);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      overflow: hidden;
+      cursor: pointer;
     }
 
-    .cc-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    .gift-card:active {
+      transform: scale(0.98);
     }
 
-    .cc-top-row {
+    .card-header {
       display: flex;
       justify-content: space-between;
-      padding: 10px;
-      height: 50%;
-      box-sizing: border-box;
-    }
-
-    .cc-logo-container {
-      width: 50%;
-      display: flex;
       align-items: flex-start;
-      justify-content: flex-start;
     }
 
-    .cc-logo {
+    /* Pastille blanche d'isolation du logo */
+    .logo-badge {
+      background-color: #ffffff;
+      border-radius: 10px;
+      padding: 4px 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 95px;
+      height: 38px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      flex-shrink: 0;
+    }
+
+    .logo-badge img {
+      max-height: 28px;
       max-width: 100%;
-      max-height: 100%;
       object-fit: contain;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+      display: block;
     }
 
-    .cc-amount {
-      width: 50%;
-      text-align: right;
-      font-size: 1.1rem;
+    /* Montant & Date */
+    .card-amount {
+      color: #ffffff;
       font-weight: 700;
-      display: flex;
-      justify-content: flex-end;
-      align-items: flex-start;
+      font-size: 1.15rem;
+      letter-spacing: -0.3px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+      margin-top: 4px;
     }
 
-    .cc-bottom-row {
-      padding: 10px;
+    .card-footer {
       display: flex;
       justify-content: flex-end;
-      align-items: flex-end;
-      height: 50%;
     }
 
-    .cc-exp {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 0.9rem;
-      font-weight: bold;
-            letter-spacing: 1px;
+    .card-expiry {
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      font-variant-numeric: tabular-nums;
     }
 
     .card-item { padding: 16px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
@@ -1201,6 +1204,63 @@
       return dateStr;
     }
 
+
+    function applyDynamicCardTheme(imgElement, cardElement) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      canvas.width = 32;
+      canvas.height = 32;
+
+      try {
+        ctx.drawImage(imgElement, 0, 0, 32, 32);
+        const { data } = ctx.getImageData(0, 0, 32, 32);
+
+        let r = 0, g = 0, b = 0, count = 0;
+
+        // Parcourt les pixels en ignorant la transparence et les blancs/gris très clairs
+        for (let i = 0; i < data.length; i += 4) {
+          const alpha = data[i + 3];
+          const red = data[i];
+          const green = data[i + 1];
+          const blue = data[i + 2];
+
+          if (alpha > 200 && (red < 235 || green < 235 || blue < 235)) {
+            r += red;
+            g += green;
+            b += blue;
+            count++;
+          }
+        }
+
+        if (count > 0) {
+          r = Math.round(r / count);
+          g = Math.round(g / count);
+          b = Math.round(b / count);
+
+          // Extraction de la teinte (Hue) en HSL
+          r /= 255; g /= 255; b /= 255;
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          let h = 0;
+          if (max !== min) {
+            const d = max - min;
+            switch (max) {
+              case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+              case g: h = (b - r) / d + 2; break;
+              case b: h = (r - g) / d + 4; break;
+            }
+            h = Math.round(h * 60);
+          }
+
+          // Dégradé sombre et saturé adapté au texte blanc
+          cardElement.style.background = `linear-gradient(135deg, hsl(${h}, 70%, 22%), hsl(${h}, 75%, 11%))`;
+        }
+      } catch (e) {
+        // Repli en cas de restriction CORS sur l'image
+        cardElement.style.background = 'linear-gradient(135deg, #1f2937, #111827)';
+      }
+    }
+
     function renderCartes(cartes) {
       const container = document.getElementById('list-cartes-container');
       container.innerHTML = cartes.length ? '' : '<p style="text-align:center; padding:20px;">Aucune carte active disponible.</p>';
@@ -1212,47 +1272,47 @@
         }
         
         const div = document.createElement('div');
-        div.className = 'cc-card';
+        div.className = 'gift-card';
         div.onclick = () => selectCard(c);
 
-        const topRow = document.createElement('div');
-        topRow.className = 'cc-top-row';
+        const cardHeader = document.createElement('div');
+        cardHeader.className = 'card-header';
 
-        const logoContainer = document.createElement('div');
-        logoContainer.className = 'cc-logo-container';
+        const logoBadge = document.createElement('div');
+        logoBadge.className = 'logo-badge';
 
         if (c.logo_url) {
           const img = document.createElement('img');
-          img.className = 'cc-logo';
           img.crossOrigin = 'anonymous';
-          img.alt = c.nom || 'Logo de la carte';
+          img.alt = c.nom || 'Enseigne';
           img.src = c.logo_url;
-          logoContainer.appendChild(img);
+          img.onload = function() { applyDynamicCardTheme(this, div); };
+          logoBadge.appendChild(img);
         } else {
           const label = document.createElement('span');
           label.textContent = c.nom;
-          logoContainer.appendChild(label);
+          logoBadge.appendChild(label);
         }
 
         const amount = document.createElement('div');
-        amount.className = 'cc-amount';
+        amount.className = 'card-amount';
         amount.textContent = `${c.solde} €`;
 
-        topRow.appendChild(logoContainer);
-        topRow.appendChild(amount);
+        cardHeader.appendChild(logoBadge);
+        cardHeader.appendChild(amount);
 
-        const bottomRow = document.createElement('div');
-        bottomRow.className = 'cc-bottom-row';
+        const cardFooter = document.createElement('div');
+        cardFooter.className = 'card-footer';
 
         if (expText) {
-          const exp = document.createElement('div');
-          exp.className = 'cc-exp';
+          const exp = document.createElement('span');
+          exp.className = 'card-expiry';
           exp.textContent = expText;
-          bottomRow.appendChild(exp);
+          cardFooter.appendChild(exp);
         }
 
-        div.appendChild(topRow);
-        div.appendChild(bottomRow);
+        div.appendChild(cardHeader);
+        div.appendChild(cardFooter);
         container.appendChild(div);
       });
     }
