@@ -303,6 +303,67 @@
 
     .item-list { display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 2px; }
 
+
+    /* Custom Dropdown Styles */
+    .custom-dropdown {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background-color: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding-left: 12px;
+    }
+    .custom-dropdown input {
+      border: none;
+      background: transparent;
+      padding: 12px;
+      padding-left: 8px;
+      flex: 1;
+      border-radius: 0;
+      outline: none;
+    }
+    .custom-dropdown-logo {
+      max-height: 24px;
+      max-width: 40px;
+      display: none;
+      object-fit: contain;
+    }
+    .custom-dropdown-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin-top: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1001;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: none;
+    }
+    .custom-dropdown-item {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+    .custom-dropdown-item:last-child {
+      border-bottom: none;
+    }
+    .custom-dropdown-item:hover {
+      background-color: #f5f5f5;
+    }
+    .custom-dropdown-item img {
+      max-height: 20px;
+      max-width: 30px;
+      object-fit: contain;
+    }
+
     /* New Credit Card Styles for list */
     .cc-grid {
       display: grid;
@@ -513,10 +574,13 @@
         </div>
 
         <div class="screen-content" id="add-form-content">
-          <div class="form-group" style="margin-top:5px;">
+          <div class="form-group" style="margin-top:5px;" id="enseigne-group">
             <label>Enseigne / Magasin</label>
-            <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon..." list="enseignes-list">
-            <datalist id="enseignes-list"></datalist>
+            <div class="custom-dropdown" id="add-nom-wrapper">
+              <img id="add-nom-logo" class="custom-dropdown-logo" src="" alt="Logo">
+              <input type="text" id="add-nom" placeholder="Ex: Fnac, Decathlon..." autocomplete="off">
+              <div id="enseignes-dropdown-list" class="custom-dropdown-list"></div>
+            </div>
           </div>
           <div class="form-group">
             <label>Montant Initial (€)</label>
@@ -643,6 +707,28 @@
     let errorTimeout = null;
 
     window.onload = async () => {
+      // Setup dropdown listeners
+      const enseigneInput = document.getElementById('add-nom');
+      if (enseigneInput) {
+        enseigneInput.addEventListener('focus', () => renderDropdown(enseigneInput.value));
+        enseigneInput.addEventListener('input', (e) => {
+          renderDropdown(e.target.value);
+          // Hide logo if typing
+          const logoEl = document.getElementById('add-nom-logo');
+          if (logoEl) {
+             logoEl.style.display = 'none';
+          }
+        });
+
+        // Hide dropdown on click outside
+        document.addEventListener('click', (e) => {
+          const wrapper = document.getElementById('add-nom-wrapper');
+          const dropdownList = document.getElementById('enseignes-dropdown-list');
+          if (wrapper && dropdownList && !wrapper.contains(e.target)) {
+            dropdownList.style.display = 'none';
+          }
+        });
+      }
       await initialiserApplication();
     };
 
@@ -943,13 +1029,48 @@
         const { data, error } = await supabaseClient.from('enseignes').select('*').order('nom');
         if (error) throw error;
         listEnseignes = data || [];
-        const datalist = document.getElementById('enseignes-list');
-        if (datalist) {
-          datalist.innerHTML = listEnseignes.map(e => `<option value="${e.nom}">`).join('');
-        }
       } catch (e) {
         console.error("Erreur chargement enseignes:", e);
       }
+    }
+
+    function renderDropdown(filterText = '') {
+      const dropdownList = document.getElementById('enseignes-dropdown-list');
+      if (!dropdownList) return;
+
+      const text = filterText.toLowerCase();
+      const filtered = listEnseignes.filter(e => e.nom.toLowerCase().includes(text));
+
+      if (filtered.length === 0) {
+        dropdownList.style.display = 'none';
+        return;
+      }
+
+      dropdownList.innerHTML = filtered.map(e => {
+        const logoHtml = e.logo_url ? `<img src="${e.logo_url}" loading="lazy" alt="logo">` : `<span class="material-icons" style="font-size:20px; color:#999;">store</span>`;
+        return `<div class="custom-dropdown-item" onclick="selectEnseigne('${e.nom.replace(/'/g, "\'")}', '${(e.logo_url || '').replace(/'/g, "\'")}')">
+                  ${logoHtml} <span>${e.nom}</span>
+                </div>`;
+      }).join('');
+
+      dropdownList.style.display = 'block';
+    }
+
+    function selectEnseigne(nom, logoUrl) {
+      const input = document.getElementById('add-nom');
+      const logoEl = document.getElementById('add-nom-logo');
+      const dropdownList = document.getElementById('enseignes-dropdown-list');
+
+      input.value = nom;
+      if (logoUrl) {
+        logoEl.src = logoUrl;
+        logoEl.style.display = 'block';
+      } else {
+        logoEl.src = '';
+        logoEl.style.display = 'none';
+      }
+
+      dropdownList.style.display = 'none';
     }
 
     function showError(message) {
