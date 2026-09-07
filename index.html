@@ -1175,18 +1175,46 @@
         const div = document.createElement('div');
         div.className = 'cc-card';
         div.onclick = () => selectCard(c);
-        
-        div.innerHTML = `
-          <div class="cc-top-row">
-            <div class="cc-logo-container">
-              ${c.logo_url ? `<img src="${c.logo_url}" class="cc-logo" crossorigin="anonymous" onload="getDominantColor(this, this.closest('.cc-card'))">` : `<span>${c.nom}</span>`}
-            </div>
-            <div class="cc-amount">${c.solde} €</div>
-          </div>
-          <div class="cc-bottom-row">
-            ${expText ? `<div class="cc-exp">${expText}</div>` : ''}
-          </div>
-        `;
+
+        const topRow = document.createElement('div');
+        topRow.className = 'cc-top-row';
+
+        const logoContainer = document.createElement('div');
+        logoContainer.className = 'cc-logo-container';
+
+        if (c.logo_url) {
+          const img = document.createElement('img');
+          img.className = 'cc-logo';
+          img.crossOrigin = 'anonymous';
+          img.alt = c.nom || 'Logo de la carte';
+          img.addEventListener('load', () => getDominantColor(img, div));
+          img.src = c.logo_url;
+          logoContainer.appendChild(img);
+        } else {
+          const label = document.createElement('span');
+          label.textContent = c.nom;
+          logoContainer.appendChild(label);
+        }
+
+        const amount = document.createElement('div');
+        amount.className = 'cc-amount';
+        amount.textContent = `${c.solde} €`;
+
+        topRow.appendChild(logoContainer);
+        topRow.appendChild(amount);
+
+        const bottomRow = document.createElement('div');
+        bottomRow.className = 'cc-bottom-row';
+
+        if (expText) {
+          const exp = document.createElement('div');
+          exp.className = 'cc-exp';
+          exp.textContent = expText;
+          bottomRow.appendChild(exp);
+        }
+
+        div.appendChild(topRow);
+        div.appendChild(bottomRow);
         container.appendChild(div);
       });
     }
