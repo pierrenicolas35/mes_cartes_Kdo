@@ -1074,9 +1074,13 @@
       if (!imgEl.complete || imgEl.naturalWidth === 0) return;
 
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = imgEl.naturalWidth;
-      canvas.height = imgEl.naturalHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+
+      const maxSize = 64;
+      const scale = Math.min(1, maxSize / Math.max(imgEl.naturalWidth, imgEl.naturalHeight));
+      canvas.width = Math.max(1, Math.round(imgEl.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(imgEl.naturalHeight * scale));
 
       ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
       let imageData;
