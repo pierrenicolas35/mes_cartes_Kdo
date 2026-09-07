@@ -172,6 +172,7 @@
     }
     .grid-icon-box.add { background: #e8f5e9; color: var(--success); }
     .grid-icon-box.hist { background: #f3e5f5; color: var(--secondary); }
+    .grid-icon-box.logout { background: #ffebee; color: var(--danger); }
     .grid-action-card h4 { font-size: 0.95rem; font-weight: 700; color: var(--text); }
     .grid-action-card p { font-size: 0.78rem; color: #8898aa; }
 
@@ -246,7 +247,7 @@
   <div class="app-container">
     <header>
       <h1><span class="material-icons">card_giftcard</span> Mes Cartes</h1>
-      <button class="btn btn-logout btn-icon" id="btn-google-logout" onclick="deconnecterGoogle()" title="Déconnexion Google" aria-label="Déconnexion Google" style="margin:0; display:none;">
+      <button class="btn btn-logout btn-icon" id="btn-logout" onclick="signOut()" title="Déconnexion" aria-label="Déconnexion" style="margin:0; display:none;">
         <span class="material-icons">logout</span>
       </button>
     </header>
@@ -266,22 +267,15 @@
         <p id="auth-status" style="text-align:center; color:#777; margin-bottom:10px; font-size:0.85rem;">Non connecté</p>
 
         <div id="auth-methods-step" style="display:block; text-align:center;">
-            <button class="btn btn-back" onclick="signInWithPasskey()" style="margin-bottom:15px; width:100%; display:flex; justify-content:center; align-items:center;">
-              <span class="material-icons" style="margin-right:8px;">fingerprint</span> Connexion Biométrique (Passkey)
-            </button>
-            <p style="font-size:0.8rem; color:#888; margin-bottom:10px;">Ou avec email :</p>
             <input type="email" id="auth-email" placeholder="Adresse email" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;" />
             <input type="password" id="auth-password" placeholder="Mot de passe" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;" />
-            <button class="btn btn-back" id="btn-login-password" onclick="signInWithPassword()" style="margin-top:0;">
+            <button class="btn btn-back" id="btn-login-password" onclick="signInWithPassword()" style="margin-top:0; width:100%;">
             <span class="material-icons">login</span> Se connecter
             </button>
         </div>
 
         <button class="btn btn-submit" id="btn-access" onclick="switchScreen('screen-menu')" style="display:none;">
           <span class="material-icons">lock_open</span> Accéder
-        </button>
-        <button class="btn btn-logout btn-icon" id="btn-logout" onclick="signOut()" title="Déconnexion" aria-label="Déconnexion" style="margin:0; display:none; margin-top:10px;">
-          <span class="material-icons">logout</span>
         </button>
       </div>
     </div>
@@ -336,13 +330,13 @@
             </div>
           </div>
 
-          <div class="grid-action-card" onclick="registerPasskey()">
-            <div class="grid-icon-box" style="background-color: var(--primary); color: white;">
-              <span class="material-icons">fingerprint</span>
+          <div class="grid-action-card" onclick="signOut()">
+            <div class="grid-icon-box logout">
+              <span class="material-icons">logout</span>
             </div>
             <div>
-              <h4>Biométrie</h4>
-              <p>Activer la biométrie</p>
+              <h4>Déconnexion</h4>
+              <p>Se déconnecter</p>
             </div>
           </div>
         </div>
@@ -487,7 +481,7 @@
 
   const supabaseUrl = 'https://jblxvrzxmhbvdvmqddxf.supabase.co';
     const supabaseKey = 'sb_publishable_rlgOvnuIPqfU_Mt3nkoC2g_TOwBgPV4';
-    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, { auth: { experimental: { passkey: true } } });
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
     let userName = localStorage.getItem('app_cartes_user_first_name') || '';
     let currentUserEmail = '';
     let errorTimeout = null;
@@ -701,39 +695,6 @@
         valeur = parties[0] + '.' + parties.slice(1).join('');
       }
       champ.value = valeur;
-    }
-
-    async function registerPasskey() {
-      try {
-        const { data, error } = await supabaseClient.auth.registerPasskey();
-        if (error) {
-          showError("Erreur d'enregistrement biométrique : " + error.message);
-        } else {
-          alert("Biométrie activée avec succès ! Vous pouvez maintenant l'utiliser pour vous connecter.");
-        }
-      } catch(err) {
-        showError("Erreur : " + err.message);
-      }
-    }
-
-    async function signInWithPasskey() {
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithPasskey();
-        if (error) {
-           if(error.message.includes("passkey_disabled")) {
-               return showError("La connexion par Passkey n'est pas activée sur le serveur. Utilisez l'email.");
-           }
-           throw error;
-        }
-
-        userName = data.user?.user_metadata?.first_name || data.user?.email?.split('@')[0];
-        currentUserEmail = data.user?.email;
-        localStorage.setItem('app_cartes_user_first_name', userName);
-        mettreAJourEtatConnexion();
-        switchScreen('screen-menu');
-      } catch(err) {
-        showError("Erreur biométrique : " + err.message);
-      }
     }
 
     async function signInWithPassword() {
