@@ -302,6 +302,99 @@
     .btn-icon .material-icons { font-size: 1.1rem; margin: 0; }
 
     .item-list { display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 2px; }
+
+    /* New Credit Card Styles for list */
+    .cc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      padding-bottom: 20px;
+      flex: 1;
+      overflow-y: auto;
+      align-content: start;
+    }
+
+    .cc-card {
+      position: relative;
+      aspect-ratio: 1.586;
+      border-radius: 12px;
+      background-color: #888; /* fallback color */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .cc-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Light inner shine */
+    .cc-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%);
+      pointer-events: none;
+    }
+
+    .cc-top-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      height: 50%;
+      box-sizing: border-box;
+    }
+
+    .cc-logo-container {
+      width: 50%;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    .cc-logo {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+    }
+
+    .cc-amount {
+      width: 50%;
+      text-align: right;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-start;
+    }
+
+    .cc-bottom-row {
+      padding: 10px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      height: 50%;
+    }
+
+    .cc-exp {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9rem;
+      font-weight: bold;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+      letter-spacing: 1px;
+    }
+
     .card-item { padding: 16px; border: 1px solid #eee; border-radius: 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
     .card-info h3 { font-size: 1.05rem; color: #222; }
     .card-info p { font-size: 0.85rem; color: #777; }
@@ -486,7 +579,7 @@
     <div id="screen-use-list" class="screen">
       <div class="internal-card">
         <h2>Choisir une carte</h2>
-        <div id="list-cartes-container" class="item-list"></div>
+        <div id="list-cartes-container" class="cc-grid"></div>
         <button class="btn btn-back" onclick="switchScreen('screen-menu')">Retour</button>
       </div>
     </div>
@@ -975,6 +1068,63 @@
       }
     }
 
+
+    // Dominant Color Extraction
+    function getDominantColor(imgEl, cardEl) {
+      if (!imgEl.complete || imgEl.naturalWidth === 0) return;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = imgEl.naturalWidth;
+      canvas.height = imgEl.naturalHeight;
+
+      ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+      let imageData;
+      try {
+        imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      } catch(e) {
+        // Cross-origin restriction
+        console.warn('Could not extract color due to CORS');
+        return;
+      }
+
+      const data = imageData.data;
+      const colorCounts = {};
+      let maxCount = 0;
+      let dominantColor = '#888';
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i+1];
+        const b = data[i+2];
+        const a = data[i+3];
+
+        // Skip transparent, white-ish, and black-ish pixels
+        if (a < 128) continue;
+        if (r > 240 && g > 240 && b > 240) continue;
+        if (r < 30 && g < 30 && b < 30) continue;
+
+        // Group colors a bit by reducing resolution
+        const step = 20;
+        const rGrp = Math.floor(r / step) * step;
+        const gGrp = Math.floor(g / step) * step;
+        const bGrp = Math.floor(b / step) * step;
+
+        const key = `${rGrp},${gGrp},${bGrp}`;
+
+        colorCounts[key] = (colorCounts[key] || 0) + 1;
+
+        if (colorCounts[key] > maxCount) {
+          maxCount = colorCounts[key];
+          dominantColor = `rgb(${rGrp}, ${gGrp}, ${bGrp})`;
+        }
+      }
+
+      if (maxCount > 0) {
+        cardEl.style.backgroundColor = dominantColor;
+      }
+    }
+
     async function openUseScreen() {
       switchScreen('screen-use-list');
       document.getElementById('list-cartes-container').innerHTML = '<div class="loading">Recherche des cartes actives...</div>';
@@ -989,26 +1139,48 @@
     }
 
     
+    function formatExpDate(dateStr) {
+      if (!dateStr) return '';
+      // Support YYYY-MM-DD
+      let parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const year = parts[0].substring(2); // last two digits of year
+        const month = parts[1];
+        return `${month}/${year}`;
+      }
+      // Support DD/MM/YYYY
+      parts = dateStr.split('/');
+      if (parts.length === 3) {
+        const year = parts[2].substring(2);
+        const month = parts[1];
+        return `${month}/${year}`;
+      }
+      return dateStr;
+    }
+
     function renderCartes(cartes) {
       const container = document.getElementById('list-cartes-container');
       container.innerHTML = cartes.length ? '' : '<p style="text-align:center; padding:20px;">Aucune carte active disponible.</p>';
       
       cartes.forEach(c => {
-        const logoHtml = c.logo_url ? `<img src="${c.logo_url}" class="card-logo" alt="${c.nom}">` : `<div class="card-logo" style="background:transparent; padding:0;"></div>`;
-        const dateText = c.dateValidite ? `EXP ${c.dateValidite}` : '';
+        let expText = '';
+        if (c.dateValidite) {
+          expText = formatExpDate(c.dateValidite);
+        }
         
         const div = document.createElement('div');
-        div.className = 'card-item';
+        div.className = 'cc-card';
         div.onclick = () => selectCard(c);
         
         div.innerHTML = `
-          ${logoHtml}
-          <div class="card-info">
-            <h3>${c.nom}</h3>
-            <div class="card-solde">${c.solde} €</div>
-            <div class="card-footer">
-              <span class="card-validite">${dateText}</span>
+          <div class="cc-top-row">
+            <div class="cc-logo-container">
+              ${c.logo_url ? `<img src="${c.logo_url}" class="cc-logo" crossorigin="anonymous" onload="getDominantColor(this, this.closest('.cc-card'))">` : `<span>${c.nom}</span>`}
             </div>
+            <div class="cc-amount">${c.solde} €</div>
+          </div>
+          <div class="cc-bottom-row">
+            ${expText ? `<div class="cc-exp">${expText}</div>` : ''}
           </div>
         `;
         container.appendChild(div);
