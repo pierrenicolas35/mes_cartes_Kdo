@@ -848,7 +848,7 @@
 
         const nextId = 'carte_' + Date.now() + '_' + Math.floor(Math.random()*1000);
 
-        const enseigneMatch = listEnseignes.find(e => e.nom.toLowerCase() === data.nom.toLowerCase());
+        const enseigneMatch = listEnseignes.find(e => normalizeKey(e.nom) === normalizeKey(data.nom));
         const enseigne_id = enseigneMatch ? enseigneMatch.id : null;
 
         const newCard = {
@@ -1041,8 +1041,8 @@
       const dropdownList = document.getElementById('enseignes-dropdown-list');
       if (!dropdownList) return;
 
-      const text = filterText.toLowerCase();
-      const filtered = listEnseignes.filter(e => e.nom.toLowerCase().includes(text));
+      const text = normalizeKey(filterText);
+      const filtered = listEnseignes.filter(e => normalizeKey(e.nom).includes(text));
 
       if (filtered.length === 0) {
         dropdownList.style.display = 'none';
@@ -1285,8 +1285,15 @@
           const img = document.createElement('img');
           img.crossOrigin = 'anonymous';
           img.alt = c.nom || 'Enseigne';
-          img.src = c.logo_url;
+
           img.onload = function() { applyDynamicCardTheme(this, div); };
+          img.onerror = function() {
+            if (this.crossOrigin) {
+              this.removeAttribute('crossOrigin');
+              this.src = c.logo_url;
+            }
+          };
+          img.src = c.logo_url;
           logoBadge.appendChild(img);
         } else {
           const label = document.createElement('span');
