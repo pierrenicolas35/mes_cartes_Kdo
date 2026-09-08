@@ -804,6 +804,7 @@
       const now = new Date().toISOString();
       const newHistory = {
         nom_carte: card.nom,
+        carte_id: String(card.id),
         action: action,
         montant: Number(montant.toFixed(2)),
         utilisateur: userName || 'Famille',
@@ -894,7 +895,14 @@
         if (updateError) throw updateError;
 
         const { items: cards } = await readCardsRaw();
-        const card = cards.find(c => c.nom === target.nom_carte);
+        let card = null;
+        if (target.carte_id) {
+          card = cards.find(c => String(c.id) === String(target.carte_id));
+        }
+        if (!card) {
+          card = cards.find(c => c.nom === target.nom_carte);
+        }
+
         if (card) {
           let adjustment;
           if (isCreditAction(target.action)) adjustment = delta;
@@ -911,7 +919,14 @@
         if (targetError || !target) throw new Error("Ligne d'historique introuvable.");
 
         const { items: cards } = await readCardsRaw();
-        const card = cards.find(c => c.nom === target.nom_carte);
+        let card = null;
+        if (target.carte_id) {
+          card = cards.find(c => String(c.id) === String(target.carte_id));
+        }
+        if (!card) {
+          card = cards.find(c => c.nom === target.nom_carte);
+        }
+
         if (card) {
           let adjustment;
           if (isCreditAction(target.action)) adjustment = -toNumber(target.montant);
