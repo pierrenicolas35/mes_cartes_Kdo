@@ -513,29 +513,23 @@
     <div id="screen-menu" class="screen">
       <div class="home-dashboard">
         
-        <!-- KPI Card -->
-        <div class="kpi-card">
+        <!-- KPI & Actions Rapides Combinés -->
+        <div class="kpi-card" onclick="openUseScreen()" style="cursor: pointer;">
           <div class="kpi-header">Portefeuille Familial</div>
           <div class="kpi-value" id="dash-total-solde">-- €</div>
-          <div class="kpi-sub">
-            <span class="material-icons" style="font-size:1rem;">check_circle</span>
-            <span id="dash-nb-cartes">-- cartes disponibles</span>
+          <div class="kpi-sub" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span class="material-icons" style="font-size:1rem; vertical-align: middle;">check_circle</span>
+              <span id="dash-nb-cartes" style="vertical-align: middle;">-- cartes disponibles</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+              <span class="material-icons" style="font-size: 1.2rem;">qr_code_scanner</span>
+              <span style="font-weight: 500;">Utiliser</span>
+            </div>
           </div>
         </div>
 
-        <div class="action-section-title">Actions rapides</div>
-
-        <!-- Bouton Hero Principal -->
-        <div class="hero-action-btn" onclick="openUseScreen()">
-          <div class="hero-icon-box">
-            <span class="material-icons">qr_code_scanner</span>
-          </div>
-          <div class="hero-text">
-            <h3>Utiliser une carte</h3>
-            <p>Scanner un QR code en caisse</p>
-          </div>
-        </div>
-
+        <div class="action-section-title" style="margin-top: 20px;">Gérer mes cartes</div>
         <!-- Grille d'actions secondaires -->
         <div class="secondary-actions-grid">
           <div class="grid-action-card" onclick="switchScreen('screen-add')">
@@ -631,6 +625,9 @@
     <!-- ÉCRAN 4 : DÉBIT ET APERÇU -->
     <div id="screen-use-action" class="screen">
       <div class="internal-card">
+                <div style="text-align: center; margin-bottom: 10px;">
+          <img id="action-logo" src="" alt="Logo" style="max-height: 50px; max-width: 150px; display: none; margin: 0 auto; border-radius: 8px;">
+        </div>
         <h2 id="action-title" style="text-align: center;">...</h2>
         
         <div id="use-success" class="banner success-banner">
@@ -1233,19 +1230,25 @@
 
         let r = 0, g = 0, b = 0, count = 0;
 
-        // Parcourt les pixels en ignorant la transparence et les blancs/gris très clairs
         for (let i = 0; i < data.length; i += 4) {
           const alpha = data[i + 3];
           const red = data[i];
           const green = data[i + 1];
           const blue = data[i + 2];
 
-          if (alpha > 200 && (red < 235 || green < 235 || blue < 235)) {
-            r += red;
-            g += green;
-            b += blue;
-            count++;
-          }
+          // Ignore transparent pixels
+          if (alpha < 200) continue;
+
+          // Ignore very light pixels (white backgrounds)
+          if (red > 240 && green > 240 && blue > 240) continue;
+
+          // Ignore very dark pixels (black lines)
+          if (red < 15 && green < 15 && blue < 15) continue;
+
+          r += red;
+          g += green;
+          b += blue;
+          count++;
         }
 
         if (count > 0) {
@@ -1253,25 +1256,30 @@
           g = Math.round(g / count);
           b = Math.round(b / count);
 
-          // Extraction de la teinte (Hue) en HSL
-          r /= 255; g /= 255; b /= 255;
-          const max = Math.max(r, g, b), min = Math.min(r, g, b);
-          let h = 0;
+          let rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+          let max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+          let h = 0, s = 0, l = (max + min) / 2;
+
           if (max !== min) {
-            const d = max - min;
+            let d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
             switch (max) {
-              case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-              case g: h = (b - r) / d + 2; break;
-              case b: h = (r - g) / d + 4; break;
+              case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
+              case gNorm: h = (bNorm - rNorm) / d + 2; break;
+              case bNorm: h = (rNorm - gNorm) / d + 4; break;
             }
             h = Math.round(h * 60);
           }
+          s = Math.round(s * 100);
 
-          // Dégradé sombre et saturé adapté au texte blanc
-          cardElement.style.background = `linear-gradient(135deg, hsl(${h}, 70%, 22%), hsl(${h}, 75%, 11%))`;
+          if (s < 10) {
+              cardElement.style.background = 'linear-gradient(135deg, #2a2a2a, #111111)';
+          } else {
+              let saturation = Math.max(s, 50);
+              cardElement.style.background = `linear-gradient(135deg, hsl(${h}, ${saturation}%, 25%), hsl(${h}, ${saturation}%, 10%))`;
+          }
         }
       } catch (e) {
-        // Repli en cas de restriction CORS sur l'image
         cardElement.style.background = 'linear-gradient(135deg, #1f2937, #111827)';
       }
     }
@@ -1343,6 +1351,16 @@
     function selectCard(c) {
       currentCard = c;
       switchScreen('screen-use-action');
+
+      const logoEl = document.getElementById('action-logo');
+      if (c.logo_url) {
+        logoEl.src = c.logo_url;
+        logoEl.style.display = 'block';
+      } else {
+        logoEl.style.display = 'none';
+        logoEl.src = '';
+      }
+
       document.getElementById('action-title').innerText = c.nom;
       document.getElementById('action-solde').innerText = c.solde;
       document.getElementById('use-montant').value = '';
